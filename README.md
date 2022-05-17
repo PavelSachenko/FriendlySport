@@ -6,6 +6,6 @@
 3. make migrate
 
 <h2>Usage</h2>
-All APIs are described at **http://localhost:7000/api/docs/index.html**
+All APIs are described at <strong>http://localhost:7000/api/docs/index.html </strong>
 <br>
 Authorization (Bearer token) is performed by jwt token
