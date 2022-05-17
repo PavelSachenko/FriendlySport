@@ -33,6 +33,9 @@ func main() {
 	}
 }
 
+//DB_PORT=5432
+//DB_HOST=postgres
+
 func run() (error, *server.Server) {
 	err, cfg := config.InitConfig()
 	if err != nil {
@@ -69,6 +72,7 @@ func initHandlers(cfg *config.Config) (error, *handlers.Handler) {
 	roleService := services.InitRoleService(roleRepo)
 
 	return nil, handlers.InitHandlers(
+		cfg,
 		authService,
 		userService,
 		roleService,

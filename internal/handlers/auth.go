@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"test_project/internal/models"
+	"time"
 )
 
 func (h *Handler) initAuth(rg *gin.RouterGroup) {
@@ -14,13 +15,6 @@ func (h *Handler) initAuth(rg *gin.RouterGroup) {
 		auth.POST("refresh", h.Refresh)
 		auth.Use(h.authorized).POST("logout", h.logout)
 	}
-}
-
-func (h *Handler) test(ctx *gin.Context) {
-
-	ctx.JSON(http.StatusOK, map[string]string{
-		"test": "hello",
-	})
 }
 
 type SignIn struct {
@@ -67,6 +61,15 @@ func (h *Handler) signIn(ctx *gin.Context) {
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 	})
+
+	http.SetCookie(ctx.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		Secure:   false,
+		HttpOnly: true,
+		Expires:  time.Now().Add(h.cfg.Auth.AuthRefreshTokenExpire),
+	})
+
 }
 
 type SignUp struct {
@@ -114,11 +117,18 @@ func (h *Handler) signUp(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-
+	http.SetCookie(ctx.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		Secure:   false,
+		HttpOnly: true,
+		Expires:  time.Now().Add(h.cfg.Auth.AuthRefreshTokenExpire),
+	})
 	ctx.JSON(http.StatusOK, map[string]string{
 		"access_token":  tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
 	})
+
 }
 
 // Logout godoc
@@ -135,6 +145,14 @@ func (h *Handler) logout(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, "unauthorized")
 		return
 	}
+
+	http.SetCookie(ctx.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Secure:   false,
+		HttpOnly: true,
+		MaxAge:   -1,
+	})
 
 	ctx.JSON(http.StatusNoContent, nil)
 }
@@ -164,8 +182,18 @@ func (h *Handler) Refresh(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnprocessableEntity, err.Error())
 		return
 	}
+
+	http.SetCookie(ctx.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokenDetails.RefreshToken,
+		Secure:   false,
+		HttpOnly: true,
+		Expires:  time.Now().Add(h.cfg.Auth.AuthRefreshTokenExpire),
+	})
+
 	ctx.JSON(http.StatusOK, tokenResponse{
 		AccessToken:  tokenDetails.AccessToken,
 		RefreshToken: tokenDetails.RefreshToken,
 	})
+
 }

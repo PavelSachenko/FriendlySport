@@ -1,26 +1,30 @@
 package handlers
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"test_project/config"
 	_ "test_project/docs"
 	"test_project/internal/services"
 )
 
 type Handler struct {
 	*gin.Engine
+	cfg  *config.Config
 	auth services.Auth
 	user services.User
 	role services.Role
 }
 
-func InitHandlers(auth services.Auth, user services.User, role services.Role) *Handler {
+func InitHandlers(cfg *config.Config, auth services.Auth, user services.User, role services.Role) *Handler {
 	return &Handler{
 		Engine: gin.New(),
 		auth:   auth,
 		user:   user,
 		role:   role,
+		cfg:    cfg,
 	}
 }
 
@@ -30,6 +34,7 @@ func (h *Handler) InitApi() *gin.Engine {
 	h.initAuth(api)
 	h.initRole(api)
 	h.initUser(api)
+	api.Use(cors.Default())
 
 	return h.Engine
 }
