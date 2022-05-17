@@ -1,0 +1,231 @@
+basePath: /
+definitions:
+  handlers.SignIn:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 60
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handlers.SignUp:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 60
+        minLength: 6
+        type: string
+      repeat_password:
+        maxLength: 60
+        minLength: 6
+        type: string
+      role_id:
+        type: integer
+    required:
+    - email
+    - password
+    - repeat_password
+    - role_id
+    type: object
+  handlers.refreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  handlers.tokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  models.Role:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+    type: object
+  models.User:
+    properties:
+      avatar:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      password_hash:
+        type: string
+      role:
+        $ref: '#/definitions/models.Role'
+      updated_at:
+        type: string
+    type: object
+host: localhost:7000
+info:
+  contact: {}
+  description: just api for frontend.
+  title: Sport Friendly API
+  version: "1.0"
+paths:
+  /api/auth/logout:
+    post:
+      description: Delete access token from redis
+      responses:
+        "204":
+          description: ""
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Logout from the system
+      tags:
+      - auth
+  /api/auth/refresh:
+    post:
+      description: Delete refresh token from redis and create new
+      parameters:
+      - description: refresh_token body
+        in: body
+        name: json/input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.refreshRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.tokenResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      summary: Refresh auth tokens
+      tags:
+      - auth
+  /api/auth/sign-in:
+    post:
+      description: Create token for login to the system
+      parameters:
+      - description: sign up body
+        in: body
+        name: json/input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SignIn'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: objects
+        "422":
+          description: Invalid json provided
+          schema:
+            type: string
+      summary: Sign In to the system
+      tags:
+      - auth
+  /api/auth/sign-up:
+    post:
+      description: Create new user account on postgres db and create pairs token for
+        it
+      parameters:
+      - description: sign up body
+        in: body
+        name: json/input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SignUp'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      summary: Sign Up to the system
+      tags:
+      - auth
+  /api/roles:
+    get:
+      description: Get all roles system
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Role'
+        "500":
+          description: ""
+      summary: Get Roles
+      tags:
+      - roles
+  /api/user/{id}:
+    get:
+      description: Get User by ID
+      parameters:
+      - description: user id
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get User
+      tags:
+      - user
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
