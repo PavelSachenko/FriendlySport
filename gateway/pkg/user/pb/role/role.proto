@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package UserService;
+
+option go_package = "github.com/pavel/gateway/pkg/user/pb/role";
+import "google/protobuf/empty.proto";
+
+service RoleService {
+  rpc All(google.protobuf.Empty) returns (AllResponse);
+}
+
+message Role {
+  uint64 id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message AllResponse{
+  uint32 status = 1;
+  string error = 2;
+  repeated Role roles = 3 ;
+}
