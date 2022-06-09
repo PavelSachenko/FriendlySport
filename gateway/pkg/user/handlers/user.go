@@ -4,19 +4,20 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/pavel/gateway/pkg/user/pb/user"
+	"github.com/pavel/gateway/pkg/utils"
 	"net/http"
 )
 
 func User(ctx *gin.Context, u user.UserServiceClient) {
 
-	userId, ok := ctx.Get("userId")
-	if ok == false {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+	authError, userId := utils.GetUserIdFromContext(ctx)
+	if authError != nil {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, authError)
 		return
 	}
-	test := userId.(uint64)
+
 	res, err := u.One(context.Background(), &user.OneRequest{
-		UserId: test,
+		UserId: userId,
 	})
 
 	if err != nil || res.Status != http.StatusOK {

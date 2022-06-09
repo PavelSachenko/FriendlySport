@@ -13,6 +13,12 @@ type AuthMiddleware struct {
 	svc ServiceClient
 }
 
+func InitAuthMiddleware(svc ServiceClient) AuthMiddleware {
+	return AuthMiddleware{
+		svc: svc,
+	}
+}
+
 func (c *AuthMiddleware) AuthRequired(ctx *gin.Context) {
 	res, err := c.svc.Auth.CheckAuthToken(context.Background(), &auth.CheckTokenRequest{
 		Token: utils.GetBearerToken(ctx),

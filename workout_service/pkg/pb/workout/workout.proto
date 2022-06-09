@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package WorkoutService;
+
+option go_package = "github.com/pavel/workout_service/pkg/pb/workout";
+
+service WorkoutService {
+  rpc Create(CreateRequest) returns (CreateResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  rpc Update(UpdateRequest) returns (UpdateResponse);
+  rpc One(OneRequest) returns (OneResponse);
+  rpc All(AllRequest) returns (AllResponse);
+}
+
+message Workout {
+  uint64 id = 1;
+  uint64 user_id = 2;
+  string title = 3;
+  string description = 4;
+  bool is_done = 5;
+  int64 appointed_time = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+message CreateRequest{
+  uint64 user_id= 1;
+  string title = 2;
+  string description = 3;
+  int64 appointed_time = 4;
+}
+
+message CreateResponse{
+  uint32 status = 1;
+  string error = 2;
+  Workout workout = 3;
+}
+
+message DeleteRequest{
+  uint64 id = 1;
+}
+
+message DeleteResponse{
+  uint32 status = 1;
+  string error = 2;
+}
+
+message UpdateRequest{
+  uint64 id = 1;
+  uint64 user_id = 2;
+  string title = 3;
+  string description = 4;
+  bool is_done = 5;
+  int64 appointed_time = 6;
+}
+
+message UpdateResponse{
+  uint32 status = 1;
+  string error = 2;
+  Workout workout = 3;
+}
+
+message OneRequest{
+  uint64 id = 1;
+}
+
+message OneResponse{
+  uint32 status = 1;
+  string error = 2;
+  Workout workout = 3;
+}
+
+message AllRequest{
+  uint64 id = 1;
+}
+
+message AllResponse{
+  uint32 status = 1;
+  string error = 2;
+  repeated Workout workout = 3;
+}

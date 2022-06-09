@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pavel/gateway/config"
 	"github.com/pavel/gateway/pkg/user"
+	"github.com/pavel/gateway/pkg/workout"
 	"log"
 )
 
@@ -17,7 +18,8 @@ func main() {
 	fmt.Printf("cfg: %v", cfg)
 	r := gin.Default()
 
-	user.RegisterRoute(r, *cfg)
+	userSvc := user.RegisterRoute(r, *cfg)
+	workout.RegisterRoute(r, *cfg, userSvc)
 
 	r.Run(":" + cfg.Port)
 }
