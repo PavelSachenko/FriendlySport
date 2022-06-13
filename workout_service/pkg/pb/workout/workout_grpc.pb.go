@@ -27,6 +27,7 @@ type WorkoutServiceClient interface {
 	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
 	One(ctx context.Context, in *OneRequest, opts ...grpc.CallOption) (*OneResponse, error)
 	All(ctx context.Context, in *AllRequest, opts ...grpc.CallOption) (*AllResponse, error)
+	WorkoutTitleRecommendation(ctx context.Context, in *WorkoutTitleRecommendationRequest, opts ...grpc.CallOption) (*WorkoutTitleRecommendationResponse, error)
 }
 
 type workoutServiceClient struct {
@@ -82,6 +83,15 @@ func (c *workoutServiceClient) All(ctx context.Context, in *AllRequest, opts ...
 	return out, nil
 }
 
+func (c *workoutServiceClient) WorkoutTitleRecommendation(ctx context.Context, in *WorkoutTitleRecommendationRequest, opts ...grpc.CallOption) (*WorkoutTitleRecommendationResponse, error) {
+	out := new(WorkoutTitleRecommendationResponse)
+	err := c.cc.Invoke(ctx, "/WorkoutService.WorkoutService/WorkoutTitleRecommendation", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorkoutServiceServer is the server API for WorkoutService service.
 // All implementations must embed UnimplementedWorkoutServiceServer
 // for forward compatibility
@@ -91,6 +101,7 @@ type WorkoutServiceServer interface {
 	Update(context.Context, *UpdateRequest) (*UpdateResponse, error)
 	One(context.Context, *OneRequest) (*OneResponse, error)
 	All(context.Context, *AllRequest) (*AllResponse, error)
+	WorkoutTitleRecommendation(context.Context, *WorkoutTitleRecommendationRequest) (*WorkoutTitleRecommendationResponse, error)
 	mustEmbedUnimplementedWorkoutServiceServer()
 }
 
@@ -112,6 +123,9 @@ func (UnimplementedWorkoutServiceServer) One(context.Context, *OneRequest) (*One
 }
 func (UnimplementedWorkoutServiceServer) All(context.Context, *AllRequest) (*AllResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method All not implemented")
+}
+func (UnimplementedWorkoutServiceServer) WorkoutTitleRecommendation(context.Context, *WorkoutTitleRecommendationRequest) (*WorkoutTitleRecommendationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WorkoutTitleRecommendation not implemented")
 }
 func (UnimplementedWorkoutServiceServer) mustEmbedUnimplementedWorkoutServiceServer() {}
 
@@ -216,6 +230,24 @@ func _WorkoutService_All_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorkoutService_WorkoutTitleRecommendation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WorkoutTitleRecommendationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkoutServiceServer).WorkoutTitleRecommendation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/WorkoutService.WorkoutService/WorkoutTitleRecommendation",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkoutServiceServer).WorkoutTitleRecommendation(ctx, req.(*WorkoutTitleRecommendationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WorkoutService_ServiceDesc is the grpc.ServiceDesc for WorkoutService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -242,6 +274,10 @@ var WorkoutService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "All",
 			Handler:    _WorkoutService_All_Handler,
+		},
+		{
+			MethodName: "WorkoutTitleRecommendation",
+			Handler:    _WorkoutService_WorkoutTitleRecommendation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -11,6 +11,7 @@ type Workout interface {
 	AddList(workout *model.Workout) (error, *model.Workout)
 	UpdateList(workout *model.Workout) (error, *model.Workout)
 	DeleteList(id uint64) error
+	RecommendationTitles(typingTitle string) (error, []*model.WorkoutRecommendation)
 }
 
 type WorkoutService struct {
@@ -21,6 +22,10 @@ func InitWorkoutService(repo repository.Workout) *WorkoutService {
 	return &WorkoutService{
 		repo: repo,
 	}
+}
+
+func (w *WorkoutService) RecommendationTitles(typingTitle string) (error, []*model.WorkoutRecommendation) {
+	return w.repo.GetRecommendation(typingTitle)
 }
 
 func (w *WorkoutService) GetOne(id uint64) (error, *model.Workout) {

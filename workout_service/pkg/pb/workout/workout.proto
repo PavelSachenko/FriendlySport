@@ -10,6 +10,7 @@ service WorkoutService {
   rpc Update(UpdateRequest) returns (UpdateResponse);
   rpc One(OneRequest) returns (OneResponse);
   rpc All(AllRequest) returns (AllResponse);
+  rpc WorkoutTitleRecommendation(WorkoutTitleRecommendationRequest) returns (WorkoutTitleRecommendationResponse);
 }
 
 message Workout {
@@ -21,6 +22,10 @@ message Workout {
   int64 appointed_time = 6;
   int64 created_at = 7;
   int64 updated_at = 8;
+}
+
+message WorkoutTitleRecommendation{
+  string title = 1;
 }
 
 message CreateRequest{
@@ -78,4 +83,14 @@ message AllResponse{
   uint32 status = 1;
   string error = 2;
   repeated Workout workout = 3;
+}
+
+message WorkoutTitleRecommendationRequest{
+  string typingTitle = 1;
+}
+
+message WorkoutTitleRecommendationResponse{
+  uint32 status = 1;
+  string error = 2;
+  repeated WorkoutTitleRecommendation recommendationList = 3;
 }

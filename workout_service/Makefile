@@ -16,3 +16,8 @@ migrate-up:
 	docker run --rm -v $(abs_path)/migration:/migrations --network host migrate/migrate \
 						-path=/migrations/ \
 						-database "postgresql://${DB_USERNAME}:${DB_PASSWORD}@0.0.0.0:5435/${DB_DATABASE}?sslmode=disable" up
+
+migrate:
+	docker run --rm -v $(abs_path)/migration:/migrations --network host migrate/migrate \
+						-path=/migrations/ \
+						-database "postgresql://${DB_USERNAME}:${DB_PASSWORD}@0.0.0.0:5435/${DB_DATABASE}?sslmode=disable" up

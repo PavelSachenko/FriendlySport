@@ -71,3 +71,23 @@ func (s Server) mustEmbedUnimplementedWorkoutServiceServer() {
 	//TODO implement me
 	panic("implement me")
 }
+
+func (s Server) WorkoutTitleRecommendation(ctx context.Context, request *WorkoutTitleRecommendationRequest) (*WorkoutTitleRecommendationResponse, error) {
+	err, recommendationList := s.workout.RecommendationTitles(request.TypingTitle)
+	if err != nil {
+		return &WorkoutTitleRecommendationResponse{
+			Status: http.StatusInternalServerError,
+			Error:  err.Error(),
+		}, nil
+	}
+
+	var recommendations []*WorkoutTitleRecommendation
+	for _, recommendation := range recommendationList {
+		recommendations = append(recommendations, &WorkoutTitleRecommendation{Title: recommendation.Title})
+	}
+
+	return &WorkoutTitleRecommendationResponse{
+		Status:             http.StatusOK,
+		RecommendationList: recommendations,
+	}, nil
+}

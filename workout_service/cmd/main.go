@@ -47,9 +47,14 @@ func initGRPCServices(cfg *config.Config) (error, *Servers) {
 		log.Fatalf("Not connected to postgres: %v\r\n", err.Error())
 		return err, nil
 	}
-
+	log.Printf("Init Postgres\r\n")
+	err, elasticClient := db.InitElastic(cfg)
+	if err != nil {
+		log.Fatalf("Not connected to postgres: %v\r\n", err.Error())
+		return err, nil
+	}
 	log.Printf("Init Workout service\r\n")
-	workoutRepo := repository.InitWorkoutRepo(postgres)
+	workoutRepo := repository.InitWorkoutRepo(postgres, elasticClient)
 	workoutService := service.InitWorkoutService(workoutRepo)
 
 	log.Printf("Init Workout server\r\n")

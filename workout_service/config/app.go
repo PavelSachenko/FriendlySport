@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Server server
-	DB     db
+	Server  server
+	DB      db
+	Elastic elastic
 }
 
 var (
@@ -43,6 +44,11 @@ func (cfg *Config) unmarshal() error {
 	}
 
 	err = viper.Unmarshal(&cfg.DB)
+	if err != nil {
+		return err
+	}
+
+	err = viper.Unmarshal(&cfg.Elastic)
 	if err != nil {
 		return err
 	}
