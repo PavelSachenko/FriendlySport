@@ -6,11 +6,10 @@ import (
 )
 
 type Workout interface {
-	GetOne(id uint64) (error, *model.Workout)
-	GetAll()
+	GetAll(userId uint64, filterOption model.WorkoutsFiltering) (error, []*model.Workout)
 	AddList(workout *model.Workout) (error, *model.Workout)
-	UpdateList(workout *model.Workout) (error, *model.Workout)
-	DeleteList(id uint64) error
+	UpdateList(workout model.WorkoutUpdate) (error, *model.Workout)
+	DeleteList(id, userId uint64) error
 	RecommendationTitles(typingTitle string) (error, []*model.WorkoutRecommendation)
 }
 
@@ -28,26 +27,18 @@ func (w *WorkoutService) RecommendationTitles(typingTitle string) (error, []*mod
 	return w.repo.GetRecommendation(typingTitle)
 }
 
-func (w *WorkoutService) GetOne(id uint64) (error, *model.Workout) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (w *WorkoutService) GetAll() {
-	//TODO implement me
-	panic("implement me")
+func (w *WorkoutService) GetAll(userId uint64, filterOption model.WorkoutsFiltering) (error, []*model.Workout) {
+	return w.repo.All(userId, filterOption)
 }
 
 func (w *WorkoutService) AddList(workout *model.Workout) (error, *model.Workout) {
 	return w.repo.Create(workout)
 }
 
-func (w *WorkoutService) UpdateList(workout *model.Workout) (error, *model.Workout) {
-	//TODO implement me
-	panic("implement me")
+func (w *WorkoutService) UpdateList(workoutUpdate model.WorkoutUpdate) (error, *model.Workout) {
+	return w.repo.Update(workoutUpdate)
 }
 
-func (w *WorkoutService) DeleteList(id uint64) error {
-	//TODO implement me
-	panic("implement me")
+func (w *WorkoutService) DeleteList(id, userId uint64) error {
+	return w.repo.Delete(id, userId)
 }

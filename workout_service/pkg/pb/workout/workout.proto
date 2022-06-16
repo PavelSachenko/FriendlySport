@@ -8,8 +8,7 @@ service WorkoutService {
   rpc Create(CreateRequest) returns (CreateResponse);
   rpc Delete(DeleteRequest) returns (DeleteResponse);
   rpc Update(UpdateRequest) returns (UpdateResponse);
-  rpc One(OneRequest) returns (OneResponse);
-  rpc All(AllRequest) returns (AllResponse);
+  rpc All(WorkoutFilteringRequest) returns (WorkoutFilteringResponse);
   rpc WorkoutTitleRecommendation(WorkoutTitleRecommendationRequest) returns (WorkoutTitleRecommendationResponse);
 }
 
@@ -41,49 +40,17 @@ message CreateResponse{
   Workout workout = 3;
 }
 
-message DeleteRequest{
-  uint64 id = 1;
+message WorkoutFilteringRequest{
+  uint64 user_id = 1;
+  bytes query = 2;
 }
 
-message DeleteResponse{
-  uint32 status = 1;
-  string error = 2;
-}
-
-message UpdateRequest{
-  uint64 id = 1;
-  uint64 user_id = 2;
-  string title = 3;
-  string description = 4;
-  bool is_done = 5;
-  int64 appointed_time = 6;
-}
-
-message UpdateResponse{
-  uint32 status = 1;
-  string error = 2;
-  Workout workout = 3;
-}
-
-message OneRequest{
-  uint64 id = 1;
-}
-
-message OneResponse{
-  uint32 status = 1;
-  string error = 2;
-  Workout workout = 3;
-}
-
-message AllRequest{
-  uint64 id = 1;
-}
-
-message AllResponse{
+message WorkoutFilteringResponse{
   uint32 status = 1;
   string error = 2;
   repeated Workout workout = 3;
 }
+
 
 message WorkoutTitleRecommendationRequest{
   string typingTitle = 1;
@@ -93,4 +60,26 @@ message WorkoutTitleRecommendationResponse{
   uint32 status = 1;
   string error = 2;
   repeated WorkoutTitleRecommendation recommendationList = 3;
+}
+
+message UpdateRequest{
+  uint64 id = 1;
+  uint64 user_id = 2;
+  bytes query = 3;
+}
+
+message UpdateResponse{
+  uint32 status = 1;
+  string error = 2;
+  Workout workout = 3;
+}
+
+message DeleteRequest{
+  uint64 id = 1;
+  uint64 user_id = 2;
+}
+
+message DeleteResponse{
+  uint32 status = 1;
+  string error = 2;
 }

@@ -25,8 +25,7 @@ type WorkoutServiceClient interface {
 	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error)
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
-	One(ctx context.Context, in *OneRequest, opts ...grpc.CallOption) (*OneResponse, error)
-	All(ctx context.Context, in *AllRequest, opts ...grpc.CallOption) (*AllResponse, error)
+	All(ctx context.Context, in *WorkoutFilteringRequest, opts ...grpc.CallOption) (*WorkoutFilteringResponse, error)
 	WorkoutTitleRecommendation(ctx context.Context, in *WorkoutTitleRecommendationRequest, opts ...grpc.CallOption) (*WorkoutTitleRecommendationResponse, error)
 }
 
@@ -65,17 +64,8 @@ func (c *workoutServiceClient) Update(ctx context.Context, in *UpdateRequest, op
 	return out, nil
 }
 
-func (c *workoutServiceClient) One(ctx context.Context, in *OneRequest, opts ...grpc.CallOption) (*OneResponse, error) {
-	out := new(OneResponse)
-	err := c.cc.Invoke(ctx, "/WorkoutService.WorkoutService/One", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *workoutServiceClient) All(ctx context.Context, in *AllRequest, opts ...grpc.CallOption) (*AllResponse, error) {
-	out := new(AllResponse)
+func (c *workoutServiceClient) All(ctx context.Context, in *WorkoutFilteringRequest, opts ...grpc.CallOption) (*WorkoutFilteringResponse, error) {
+	out := new(WorkoutFilteringResponse)
 	err := c.cc.Invoke(ctx, "/WorkoutService.WorkoutService/All", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -99,8 +89,7 @@ type WorkoutServiceServer interface {
 	Create(context.Context, *CreateRequest) (*CreateResponse, error)
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	Update(context.Context, *UpdateRequest) (*UpdateResponse, error)
-	One(context.Context, *OneRequest) (*OneResponse, error)
-	All(context.Context, *AllRequest) (*AllResponse, error)
+	All(context.Context, *WorkoutFilteringRequest) (*WorkoutFilteringResponse, error)
 	WorkoutTitleRecommendation(context.Context, *WorkoutTitleRecommendationRequest) (*WorkoutTitleRecommendationResponse, error)
 	mustEmbedUnimplementedWorkoutServiceServer()
 }
@@ -118,10 +107,7 @@ func (UnimplementedWorkoutServiceServer) Delete(context.Context, *DeleteRequest)
 func (UnimplementedWorkoutServiceServer) Update(context.Context, *UpdateRequest) (*UpdateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
-func (UnimplementedWorkoutServiceServer) One(context.Context, *OneRequest) (*OneResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method One not implemented")
-}
-func (UnimplementedWorkoutServiceServer) All(context.Context, *AllRequest) (*AllResponse, error) {
+func (UnimplementedWorkoutServiceServer) All(context.Context, *WorkoutFilteringRequest) (*WorkoutFilteringResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method All not implemented")
 }
 func (UnimplementedWorkoutServiceServer) WorkoutTitleRecommendation(context.Context, *WorkoutTitleRecommendationRequest) (*WorkoutTitleRecommendationResponse, error) {
@@ -194,26 +180,8 @@ func _WorkoutService_Update_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _WorkoutService_One_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OneRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WorkoutServiceServer).One(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/WorkoutService.WorkoutService/One",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkoutServiceServer).One(ctx, req.(*OneRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _WorkoutService_All_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AllRequest)
+	in := new(WorkoutFilteringRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -225,7 +193,7 @@ func _WorkoutService_All_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: "/WorkoutService.WorkoutService/All",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkoutServiceServer).All(ctx, req.(*AllRequest))
+		return srv.(WorkoutServiceServer).All(ctx, req.(*WorkoutFilteringRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -266,10 +234,6 @@ var WorkoutService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Update",
 			Handler:    _WorkoutService_Update_Handler,
-		},
-		{
-			MethodName: "One",
-			Handler:    _WorkoutService_One_Handler,
 		},
 		{
 			MethodName: "All",

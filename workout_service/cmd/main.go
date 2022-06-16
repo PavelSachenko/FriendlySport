@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"github.com/pavel/workout_service/config"
 	"github.com/pavel/workout_service/pkg/db"
+	"github.com/pavel/workout_service/pkg/model"
 	"github.com/pavel/workout_service/pkg/pb/workout"
 	"github.com/pavel/workout_service/pkg/repository"
 	"github.com/pavel/workout_service/pkg/service"
@@ -16,13 +19,31 @@ type Servers struct {
 }
 
 func main() {
+	//test := context.WithValue(context.Background(), "id", "asd")
+	//id := uint64(test.Value("id").(int))
+	//fmt.Println(id)
+	//return
 	log.Printf("Initial user service config\r\n")
 	err, cfg := config.InitConfig()
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Printf("%v\r\b", cfg)
 
+	err, postgres := db.InitPostgres(cfg)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	repo := repository.InitExerciseRepo(postgres)
+	ctx := context.WithValue(context.Background(), "user_id", 1)
+	ctx = context.WithValue(ctx, "workout_id", 3)
+	ctx = context.WithValue(ctx, "id", 3)
+	temp := "test"
+	err, res := repo.Update(ctx, model.ExerciseUpdate{Description: &temp})
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(res)
+	return
 	lis, err := net.Listen("tcp", cfg.Server.Port)
 	if err != nil {
 		log.Fatalf("Tcp server error: %v\r\n", err)

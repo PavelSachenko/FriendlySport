@@ -4,22 +4,24 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	sq "github.com/Masterminds/squirrel"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	_ "github.com/lib/pq"
 	"github.com/pavel/workout_service/pkg/db"
 	"github.com/pavel/workout_service/pkg/model"
 	"log"
+	"strings"
 	"time"
 )
 
 type Workout interface {
-	One(id uint64) (error, *model.Workout)
-	All()
+	All(userId uint64, filterOption model.WorkoutsFiltering) (error, []*model.Workout)
 	Create(workout *model.Workout) (error, *model.Workout)
-	Update(workout *model.Workout) (error, *model.Workout)
-	Delete(id uint64) error
+	Update(workout model.WorkoutUpdate) (error, *model.Workout)
+	Delete(id, userId uint64) error
 	GetRecommendation(typingTitle string) (error, []*model.WorkoutRecommendation)
 }
 
@@ -117,14 +119,40 @@ func (w *WorkoutRepo) searchByElastic(typingTitle string) (error, *esapi.Respons
 	return nil, res
 }
 
-func (w *WorkoutRepo) One(id uint64) (error, *model.Workout) {
-	//TODO implement me
-	panic("implement me")
-}
+func (w *WorkoutRepo) All(userId uint64, filterOption model.WorkoutsFiltering) (error, []*model.Workout) {
+	sql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).Select("*").From(model.WorkoutTable).Where("user_id = ?", userId)
+	if filterOption.Title != nil {
+		sql = sql.Where("title LIKE ?", fmt.Sprint("%", filterOption.Title.(string), "%"))
+	}
+	if filterOption.IsDone != nil {
+		sql = sql.Where("is_done = ?", filterOption.IsDone.(bool))
+	}
 
-func (w *WorkoutRepo) All() {
-	//TODO implement me
-	panic("implement me")
+	if filterOption.Sort != nil {
+		sql = sql.OrderBy(strings.ReplaceAll(filterOption.Sort.(string), ":", " "))
+	} else {
+		sql = sql.OrderBy("created_at DESC")
+
+	}
+	sql = sql.Limit(filterOption.Limit)
+	sql = sql.Offset(filterOption.Offset)
+	var workouts []*model.Workout
+	//var totalPage int64
+	query, args, _ := sql.ToSql()
+	rows, err := w.DB.Query(query, args...)
+	if err != nil {
+		return err, nil
+	}
+	for rows.Next() {
+		workout := model.Workout{}
+		err := rows.Scan(&workout.ID, &workout.UserId, &workout.Title, &workout.Description, &workout.IsDone, &workout.AppointedTime, &workout.CreatedAt, &workout.UpdatedAt)
+		if err != nil {
+			return err, nil
+		}
+		workouts = append(workouts, &workout)
+	}
+
+	return nil, workouts
 }
 
 func (w *WorkoutRepo) Create(workout *model.Workout) (error, *model.Workout) {
@@ -149,26 +177,65 @@ func (w *WorkoutRepo) Create(workout *model.Workout) (error, *model.Workout) {
 			return err, nil
 		}
 	}
-
-	//TODO add logger
-	data, err := json.Marshal(struct {
-		Title string `json:"title"`
-	}{Title: workout.Title})
-	if err != nil {
-		log.Fatalf("Error marshaling document: %s", err)
+	if len(workout.Title) >= 3 {
+		w.addToWorkoutTitleRecommendation(workout.Title)
 	}
-
-	w.elastic.Index("friendly_sport_workout_recommendation", bytes.NewReader(data))
 
 	return nil, workout
 }
 
-func (w *WorkoutRepo) Update(workout *model.Workout) (error, *model.Workout) {
-	//TODO implement me
-	panic("implement me")
+func (w *WorkoutRepo) Update(workoutUpdate model.WorkoutUpdate) (error, *model.Workout) {
+	sql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).Update(model.WorkoutTable).Where("id = ?", workoutUpdate.Id).Where("user_id = ?", workoutUpdate.UserId)
+	if workoutUpdate.IsDone != nil {
+		sql = sql.Set("is_done", workoutUpdate.IsDone)
+	}
+	if workoutUpdate.Title != nil {
+		sql = sql.Set("title", workoutUpdate.Title)
+		if len(*workoutUpdate.Title) >= 3 {
+			w.addToWorkoutTitleRecommendation(*workoutUpdate.Title)
+		}
+	}
+	if workoutUpdate.Description != nil {
+		sql = sql.Set("description", workoutUpdate.Description)
+	}
+	if workoutUpdate.AppointedTime != nil {
+		utcTime := time.Unix(int64(*workoutUpdate.AppointedTime), 0).UTC()
+		sql = sql.Set("appointed_time", utcTime)
+	}
+	sql = sql.Set("updated_at", workoutUpdate.UpdatedAt)
+	query, args, _ := sql.ToSql()
+
+	rows, err := w.DB.Queryx(query+" RETURNING *", args...)
+	if err != nil {
+		return err, nil
+	}
+	var workout model.Workout
+	if rows.Next() {
+		err = rows.Scan(&workout.ID, &workout.UserId, &workout.Title, &workout.Description, &workout.IsDone, &workout.AppointedTime, &workout.CreatedAt, &workout.UpdatedAt)
+		if err != nil {
+			return err, nil
+		}
+	}
+
+	return nil, &workout
 }
 
-func (w *WorkoutRepo) Delete(id uint64) error {
-	//TODO implement me
-	panic("implement me")
+func (w *WorkoutRepo) Delete(id, userId uint64) error {
+	res, err := w.DB.Exec("DELETE FROM "+model.WorkoutTable+" WHERE id=$1 AND user_id=$2", id, userId)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil || count <= 0 {
+		return errors.New("not found")
+	}
+
+	return nil
+}
+
+func (w *WorkoutRepo) addToWorkoutTitleRecommendation(title string) {
+	//TODO add logger
+	res, err := w.elastic.Index("friendly_sport_workout_recommendation", bytes.NewReader([]byte(fmt.Sprintf("{\"title\": \"%s\"}", title))))
+	log.Println(err)
+	log.Println(res)
 }

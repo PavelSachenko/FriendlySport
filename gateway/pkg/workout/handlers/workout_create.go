@@ -10,7 +10,7 @@ import (
 )
 
 type workoutCreateRequest struct {
-	Title         string `json:"title"   validate:"required,min=5,max=255"`
+	Title         string `json:"title"   validate:"required,min=3,max=255"`
 	Description   string `json:"description"   validate:"omitempty,min=5,max=500"`
 	AppointedTime int64  `json:"appointed_time"   validate:"omitempty,number"`
 }

@@ -2,6 +2,7 @@ package workout
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/pavel/workout_service/pkg/model"
 	"github.com/pavel/workout_service/pkg/service"
 	"net/http"
@@ -19,11 +20,13 @@ func InitGRPCWorkoutServer(workout service.Workout) *Server {
 }
 
 func (s Server) Create(ctx context.Context, request *CreateRequest) (*CreateResponse, error) {
+	var t time.Time
+	t = time.Unix(request.AppointedTime, 0)
 	err, workout := s.workout.AddList(&model.Workout{
 		UserId:        request.UserId,
 		Title:         request.Title,
 		Description:   request.Description,
-		AppointedTime: time.Unix(request.AppointedTime, 0),
+		AppointedTime: &t,
 	})
 	if err != nil {
 		return &CreateResponse{
@@ -48,23 +51,76 @@ func (s Server) Create(ctx context.Context, request *CreateRequest) (*CreateResp
 }
 
 func (s Server) Delete(ctx context.Context, request *DeleteRequest) (*DeleteResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	err := s.workout.DeleteList(request.Id, request.UserId)
+	if err != nil {
+		return &DeleteResponse{
+			Status: http.StatusInternalServerError,
+			Error:  err.Error(),
+		}, nil
+	}
+	return &DeleteResponse{
+		Status: http.StatusNoContent,
+	}, nil
 }
 
 func (s Server) Update(ctx context.Context, request *UpdateRequest) (*UpdateResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	workoutUpdate := model.WorkoutUpdate{UserId: request.UserId, Id: request.Id, UpdatedAt: time.Now()}
+	json.Unmarshal(request.Query, &workoutUpdate)
+	err, res := s.workout.UpdateList(workoutUpdate)
+	if err != nil {
+		return &UpdateResponse{
+			Error:  err.Error(),
+			Status: http.StatusInternalServerError,
+		}, nil
+	}
+	return &UpdateResponse{
+		Status: http.StatusOK,
+		Workout: &Workout{
+			Id:            res.ID,
+			UserId:        res.UserId,
+			Title:         res.Title,
+			Description:   res.Description,
+			IsDone:        res.IsDone,
+			AppointedTime: res.AppointedTime.Unix(),
+			CreatedAt:     res.CreatedAt.Unix(),
+			UpdatedAt:     res.UpdatedAt.Unix(),
+		},
+	}, nil
 }
 
-func (s Server) One(ctx context.Context, request *OneRequest) (*OneResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
+func (s Server) All(ctx context.Context, request *WorkoutFilteringRequest) (*WorkoutFilteringResponse, error) {
+	var workoutsFiltering model.WorkoutsFiltering
+	json.Unmarshal(request.Query, &workoutsFiltering)
+	err, res := s.workout.GetAll(request.UserId, workoutsFiltering)
+	if err != nil {
+		return &WorkoutFilteringResponse{
+			Error:  err.Error(),
+			Status: http.StatusInternalServerError,
+		}, nil
+	}
 
-func (s Server) All(ctx context.Context, request *AllRequest) (*AllResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	var workoutsList []*Workout
+	for _, workout := range res {
+		var appointedTime int64
+		if workout.AppointedTime != nil {
+			appointedTime = workout.AppointedTime.Unix()
+		}
+		workoutsList = append(workoutsList, &Workout{
+			Id:            workout.ID,
+			Title:         workout.Title,
+			Description:   workout.Description,
+			UserId:        workout.UserId,
+			IsDone:        workout.IsDone,
+			AppointedTime: appointedTime,
+			CreatedAt:     workout.CreatedAt.Unix(),
+			UpdatedAt:     workout.UpdatedAt.Unix(),
+		})
+	}
+
+	return &WorkoutFilteringResponse{
+		Status:  http.StatusOK,
+		Workout: workoutsList,
+	}, nil
 }
 
 func (s Server) mustEmbedUnimplementedWorkoutServiceServer() {

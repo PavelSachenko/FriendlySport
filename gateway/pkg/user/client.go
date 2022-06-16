@@ -16,7 +16,7 @@ type ServiceClient struct {
 }
 
 func InitServiceClient(cfg config.Config) ServiceClient {
-	log.Printf("Initial workout service")
+	log.Printf("Initial user service")
 	cc, err := grpc.Dial(cfg.UserServiceUrl, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Can not connect to user service: %v", err)

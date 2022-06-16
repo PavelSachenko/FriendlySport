@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"net/http"
 	"reflect"
 	"strings"
 )
@@ -19,9 +18,9 @@ func InitValidator() *Validator {
 	}
 }
 
-func (v *Validator) Struct(s interface{}) error {
+func (v *Validator) Struct(s interface{}, tagName string) error {
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		name := strings.SplitN(fld.Tag.Get(tagName), ",", 2)[0]
 
 		if name == "-" {
 			return ""
@@ -32,13 +31,32 @@ func (v *Validator) Struct(s interface{}) error {
 	return v.StructCtx(context.Background(), s)
 }
 
-func (v *Validator) ValidateRequest(ctx *gin.Context, obj any) []*IError {
-	err := ctx.ShouldBindJSON(&obj)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, nil)
+func (v *Validator) in_array(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
 	}
 
-	err = v.Struct(obj)
+	return false
+}
+func (v *Validator) ValidateRequest(ctx *gin.Context, obj any) []*IError {
+	var tagName string
+	if !v.in_array([]string{"GET", "DELETE"}, ctx.Request.Method) {
+		tagName = "json"
+		err := ctx.ShouldBindJSON(&obj)
+		if err != nil {
+			return []*IError{{Tag: "unknown error", Value: err.Error()}}
+		}
+	} else {
+		tagName = "form"
+		err := ctx.ShouldBindQuery(&obj)
+		if err != nil {
+			return []*IError{{Tag: "unknown error", Value: err.Error()}}
+		}
+	}
+
+	err := v.Struct(obj, tagName)
 	if err != nil {
 		return v.buildJsonErrors(err)
 	}
