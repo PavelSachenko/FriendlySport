@@ -27,7 +27,7 @@ func InitExerciseRepo(db *db.DB) ExerciseRepo {
 		db,
 	}
 }
-func (e ExerciseRepo) Create(exercise model.Exercise) (error error, createdExercise *model.Exercise) {
+func (e *ExerciseRepo) Create(exercise model.Exercise) (error error, createdExercise *model.Exercise) {
 	sql := fmt.Sprintf("INSERT INTO %s (workout_id, title, description) ", model.ExerciseTable)
 	rows, err := e.Queryx(sql+"VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
 		exercise.WorkoutId,
@@ -155,13 +155,13 @@ func (e ExerciseRepo) getIds(ctx context.Context) (id, userId, workoutId uint64)
 	}()
 
 	if ctx.Value("id") != nil {
-		id = uint64(ctx.Value("id").(int))
+		id = ctx.Value("id").(uint64)
 	}
 	if ctx.Value("user_id") != nil {
-		userId = uint64(ctx.Value("user_id").(int))
+		userId = ctx.Value("user_id").(uint64)
 	}
 	if ctx.Value("workout_id") != nil {
-		workoutId = uint64(ctx.Value("workout_id").(int))
+		workoutId = ctx.Value("workout_id").(uint64)
 	}
 
 	return id, userId, workoutId

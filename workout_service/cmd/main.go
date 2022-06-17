@@ -1,11 +1,8 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"github.com/pavel/workout_service/config"
 	"github.com/pavel/workout_service/pkg/db"
-	"github.com/pavel/workout_service/pkg/model"
 	"github.com/pavel/workout_service/pkg/pb/workout"
 	"github.com/pavel/workout_service/pkg/repository"
 	"github.com/pavel/workout_service/pkg/service"
@@ -19,6 +16,7 @@ type Servers struct {
 }
 
 func main() {
+
 	//test := context.WithValue(context.Background(), "id", "asd")
 	//id := uint64(test.Value("id").(int))
 	//fmt.Println(id)
@@ -29,21 +27,29 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	err, postgres := db.InitPostgres(cfg)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	repo := repository.InitExerciseRepo(postgres)
-	ctx := context.WithValue(context.Background(), "user_id", 1)
-	ctx = context.WithValue(ctx, "workout_id", 3)
-	ctx = context.WithValue(ctx, "id", 3)
-	temp := "test"
-	err, res := repo.Update(ctx, model.ExerciseUpdate{Description: &temp})
-	if err != nil {
-		log.Fatalln(err)
-	}
-	fmt.Println(res)
-	return
+	//err, postgres := db.InitPostgres(cfg, db.InitPostgresQueryBuilder())
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
+	//
+	////repo := repository.InitExerciseRepo(postgres)
+	//ctx := context.WithValue(context.Background(), "user_id", 1)
+	//ctx = context.WithValue(ctx, "workout_id", 3)
+	//ctx = context.WithValue(ctx, "id", 3)
+	//fmt.Println(ctx.Value("user_id"))
+	////return
+	////temp := "test"
+	////err, res := repo.Update(ctx, model.ExerciseUpdate{Description: &temp})
+	////if err != nil {
+	////	log.Fatalln(err)
+	////}
+	//repo := repository.InitWorkoutRepo(postgres, nil)
+	//err, res := repo.All(1, model.WorkoutsFiltering{Limit: 10, Offset: 0})
+	//if err != nil {
+	//	log.Fatalln(err)
+	//}
+	//fmt.Println(res[0])
+	//return
 	lis, err := net.Listen("tcp", cfg.Server.Port)
 	if err != nil {
 		log.Fatalf("Tcp server error: %v\r\n", err)
@@ -63,7 +69,7 @@ func main() {
 func initGRPCServices(cfg *config.Config) (error, *Servers) {
 
 	log.Printf("Init Postgres\r\n")
-	err, postgres := db.InitPostgres(cfg)
+	err, postgres := db.InitPostgres(cfg, db.InitPostgresQueryBuilder())
 	if err != nil {
 		log.Fatalf("Not connected to postgres: %v\r\n", err.Error())
 		return err, nil

@@ -67,6 +67,7 @@ func (s Server) Update(ctx context.Context, request *UpdateRequest) (*UpdateResp
 	workoutUpdate := model.WorkoutUpdate{UserId: request.UserId, Id: request.Id, UpdatedAt: time.Now()}
 	json.Unmarshal(request.Query, &workoutUpdate)
 	err, res := s.workout.UpdateList(workoutUpdate)
+
 	if err != nil {
 		return &UpdateResponse{
 			Error:  err.Error(),
@@ -105,6 +106,9 @@ func (s Server) All(ctx context.Context, request *WorkoutFilteringRequest) (*Wor
 		if workout.AppointedTime != nil {
 			appointedTime = workout.AppointedTime.Unix()
 		}
+		jsonExercises, _ := json.Marshal(workout.Exercises)
+		var exercises []*Exercises
+		err = json.Unmarshal(jsonExercises, &exercises)
 		workoutsList = append(workoutsList, &Workout{
 			Id:            workout.ID,
 			Title:         workout.Title,
@@ -114,6 +118,7 @@ func (s Server) All(ctx context.Context, request *WorkoutFilteringRequest) (*Wor
 			AppointedTime: appointedTime,
 			CreatedAt:     workout.CreatedAt.Unix(),
 			UpdatedAt:     workout.UpdatedAt.Unix(),
+			Exercise:      exercises,
 		})
 	}
 

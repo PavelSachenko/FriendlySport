@@ -120,14 +120,14 @@ func (w *WorkoutRepo) searchByElastic(typingTitle string) (error, *esapi.Respons
 }
 
 func (w *WorkoutRepo) All(userId uint64, filterOption model.WorkoutsFiltering) (error, []*model.Workout) {
-	sql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).Select("*").From(model.WorkoutTable).Where("user_id = ?", userId)
+	sql := w.DB.QueryBuilder.Select("w.*").From(fmt.Sprintf("%s AS w", model.WorkoutTable)).Where("w.user_id = @", userId)
 	if filterOption.Title != nil {
-		sql = sql.Where("title LIKE ?", fmt.Sprint("%", filterOption.Title.(string), "%"))
+		sql = sql.AndWhere("w.title LIKE @", fmt.Sprint("%", filterOption.Title.(string), "%"))
 	}
 	if filterOption.IsDone != nil {
-		sql = sql.Where("is_done = ?", filterOption.IsDone.(bool))
+		sql = sql.AndWhere("w.is_done = @", filterOption.IsDone.(bool))
 	}
-
+	sql = sql.GroupBy("w.id")
 	if filterOption.Sort != nil {
 		sql = sql.OrderBy(strings.ReplaceAll(filterOption.Sort.(string), ":", " "))
 	} else {
@@ -137,8 +137,8 @@ func (w *WorkoutRepo) All(userId uint64, filterOption model.WorkoutsFiltering) (
 	sql = sql.Limit(filterOption.Limit)
 	sql = sql.Offset(filterOption.Offset)
 	var workouts []*model.Workout
-	//var totalPage int64
-	query, args, _ := sql.ToSql()
+
+	query, args := sql.ToSql()
 	rows, err := w.DB.Query(query, args...)
 	if err != nil {
 		return err, nil
@@ -149,6 +149,24 @@ func (w *WorkoutRepo) All(userId uint64, filterOption model.WorkoutsFiltering) (
 		if err != nil {
 			return err, nil
 		}
+		sqlExercises, exercisesArgs := w.DB.QueryBuilder.Select("e.id, e.title, e.description, e.is_done").From(model.ExerciseTable+" e").
+			Join(fmt.Sprintf("%s w ON w.id = e.workout_id", model.WorkoutTable)).
+			Where("w.id = @", workout.ID).
+			AndWhere("w.user_id = @", userId).ToSql()
+		exercisesRows, err := w.DB.Query(sqlExercises, exercisesArgs...)
+		if err != nil {
+			return err, nil
+		}
+		var exercises []*model.ExerciseIntoWorkout
+		for exercisesRows.Next() {
+			exercise := model.ExerciseIntoWorkout{}
+			err := exercisesRows.Scan(&exercise.ID, &exercise.Title, &exercise.Description, &exercise.IsDone)
+			if err != nil {
+				return err, nil
+			}
+			exercises = append(exercises, &exercise)
+		}
+		workout.Exercises = exercises
 		workouts = append(workouts, &workout)
 	}
 
