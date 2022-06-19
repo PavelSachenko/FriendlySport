@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	_ "github.com/lib/pq"
 	"github.com/pavel/workout_service/pkg/db"
+	"github.com/pavel/workout_service/pkg/errors"
+	"github.com/pavel/workout_service/pkg/logger"
 	"github.com/pavel/workout_service/pkg/model"
-	"log"
 	"strings"
 	"time"
 )
@@ -28,12 +28,14 @@ type Workout interface {
 type WorkoutRepo struct {
 	*db.DB
 	elastic *elasticsearch.Client
+	logger  logger.Logging
 }
 
-func InitWorkoutRepo(db *db.DB, elClient *elasticsearch.Client) *WorkoutRepo {
+func InitWorkoutRepo(logger logger.Logging, db *db.DB, elClient *elasticsearch.Client) *WorkoutRepo {
 	return &WorkoutRepo{
 		DB:      db,
 		elastic: elClient,
+		logger:  logger,
 	}
 }
 
@@ -45,15 +47,19 @@ type elasticSearchResults struct {
 func (w *WorkoutRepo) GetRecommendation(typingTitle string) (error, []*model.WorkoutRecommendation) {
 	err, res := w.searchByElastic(typingTitle)
 	if err != nil {
-		return err, nil
+		w.logger.Error(fmt.Sprintf("search recomendation from elastic error: ERROR %s", err.Error()))
+		return errors.UnprocessableEntity, nil
 	}
 
 	var results elasticSearchResults
 	if res.IsError() {
 		var e map[string]interface{}
 		if err := json.NewDecoder(res.Body).Decode(&e); err != nil {
-			return err, nil
+			w.logger.Error(fmt.Sprintf("json decoder error: ERROR %s", err.Error()))
+			return errors.UnprocessableEntity, nil
 		}
+		w.logger.Error(fmt.Sprintf("[%s] %s: %s", res.Status(), e["error"].(map[string]interface{})["type"], e["error"].(map[string]interface{})["reason"]))
+
 		return fmt.Errorf("[%s] %s: %s", res.Status(), e["error"].(map[string]interface{})["type"], e["error"].(map[string]interface{})["reason"]), nil
 	}
 
@@ -72,13 +78,14 @@ func (w *WorkoutRepo) GetRecommendation(typingTitle string) (error, []*model.Wor
 	}
 	var r envelopeResponse
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
-		return err, nil
+		return errors.UnprocessableEntity, nil
 	}
 	results.Total = r.Hits.Total.Value
 	for _, hit := range r.Hits.Hits {
 		var wr model.WorkoutRecommendation
 		if err := json.Unmarshal(hit.Source, &wr); err != nil {
-			log.Fatalln(err)
+			w.logger.Error(fmt.Sprintf("json unmarshal error: ERROR %s", err.Error()))
+			return errors.UnprocessableEntity, nil
 		}
 		results.Hits = append(results.Hits, &wr)
 	}
@@ -103,7 +110,8 @@ func (w *WorkoutRepo) searchByElastic(typingTitle string) (error, *esapi.Respons
 		"size": "5",
 	}
 	if err := json.NewEncoder(&buf).Encode(query); err != nil {
-		return err, nil
+		w.logger.Error(fmt.Sprintf("json encoder error: ERROR %s", err.Error()))
+		return errors.UnprocessableEntity, nil
 	}
 
 	res, err := w.elastic.Search(
@@ -113,21 +121,54 @@ func (w *WorkoutRepo) searchByElastic(typingTitle string) (error, *esapi.Respons
 		w.elastic.Search.WithPretty(),
 	)
 	if err != nil {
-		return err, nil
+		w.logger.Error(fmt.Sprintf("elastic search error: ERROR %s", err.Error()))
+		return errors.UnprocessableEntity, nil
 	}
 
 	return nil, res
 }
 
 func (w *WorkoutRepo) All(userId uint64, filterOption model.WorkoutsFiltering) (error, []*model.Workout) {
-	sql := w.DB.QueryBuilder.Select("w.*").From(fmt.Sprintf("%s AS w", model.WorkoutTable)).Where("w.user_id = @", userId)
+
+	query, args := w.createAllSqlRequest(userId, filterOption)
+	rows, err := w.DB.Query(query, args...)
+	if err != nil {
+		w.logger.Error(fmt.Sprintf("query error: ERROR %s", err.Error()))
+		return errors.UnprocessableEntity, nil
+	}
+
+	var workouts []*model.Workout
+	for rows.Next() {
+		workout := model.Workout{}
+		var exercises []*model.ExerciseIntoWorkout
+		var jsonExercises *string
+		err := rows.Scan(&workout.ID, &workout.UserId, &workout.Title, &workout.Description, &workout.IsDone, &workout.AppointedTime, &workout.CreatedAt, &workout.UpdatedAt, &jsonExercises)
+		if err != nil {
+			w.logger.Error(fmt.Sprintf("row scan error: ERROR %s", err.Error()))
+			return errors.UnprocessableEntity, nil
+		}
+		if jsonExercises != nil {
+			err = json.Unmarshal([]byte(*jsonExercises), &exercises)
+			if err != nil {
+				w.logger.Error(fmt.Sprintf("unmarshal error: ERROR %s", err.Error()))
+				return errors.UnprocessableEntity, nil
+			}
+			workout.Exercises = exercises
+		}
+		workouts = append(workouts, &workout)
+	}
+
+	return nil, workouts
+}
+
+func (w *WorkoutRepo) createAllSqlRequest(userId uint64, filterOption model.WorkoutsFiltering) (query string, arguments []interface{}) {
+	sql := w.DB.QueryBuilder.Select("w.*").From(fmt.Sprintf("%s AS w", model.WorkoutView)).Where("w.user_id = @", userId)
 	if filterOption.Title != nil {
 		sql = sql.AndWhere("w.title LIKE @", fmt.Sprint("%", filterOption.Title.(string), "%"))
 	}
 	if filterOption.IsDone != nil {
 		sql = sql.AndWhere("w.is_done = @", filterOption.IsDone.(bool))
 	}
-	sql = sql.GroupBy("w.id")
 	if filterOption.Sort != nil {
 		sql = sql.OrderBy(strings.ReplaceAll(filterOption.Sort.(string), ":", " "))
 	} else {
@@ -136,41 +177,10 @@ func (w *WorkoutRepo) All(userId uint64, filterOption model.WorkoutsFiltering) (
 	}
 	sql = sql.Limit(filterOption.Limit)
 	sql = sql.Offset(filterOption.Offset)
-	var workouts []*model.Workout
 
 	query, args := sql.ToSql()
-	rows, err := w.DB.Query(query, args...)
-	if err != nil {
-		return err, nil
-	}
-	for rows.Next() {
-		workout := model.Workout{}
-		err := rows.Scan(&workout.ID, &workout.UserId, &workout.Title, &workout.Description, &workout.IsDone, &workout.AppointedTime, &workout.CreatedAt, &workout.UpdatedAt)
-		if err != nil {
-			return err, nil
-		}
-		sqlExercises, exercisesArgs := w.DB.QueryBuilder.Select("e.id, e.title, e.description, e.is_done").From(model.ExerciseTable+" e").
-			Join(fmt.Sprintf("%s w ON w.id = e.workout_id", model.WorkoutTable)).
-			Where("w.id = @", workout.ID).
-			AndWhere("w.user_id = @", userId).ToSql()
-		exercisesRows, err := w.DB.Query(sqlExercises, exercisesArgs...)
-		if err != nil {
-			return err, nil
-		}
-		var exercises []*model.ExerciseIntoWorkout
-		for exercisesRows.Next() {
-			exercise := model.ExerciseIntoWorkout{}
-			err := exercisesRows.Scan(&exercise.ID, &exercise.Title, &exercise.Description, &exercise.IsDone)
-			if err != nil {
-				return err, nil
-			}
-			exercises = append(exercises, &exercise)
-		}
-		workout.Exercises = exercises
-		workouts = append(workouts, &workout)
-	}
 
-	return nil, workouts
+	return query, args
 }
 
 func (w *WorkoutRepo) Create(workout *model.Workout) (error, *model.Workout) {
@@ -192,7 +202,8 @@ func (w *WorkoutRepo) Create(workout *model.Workout) (error, *model.Workout) {
 	for rows.Next() {
 		err = rows.StructScan(&workout)
 		if err != nil {
-			return err, nil
+			w.logger.Error(fmt.Sprintf("struct scan error: ERROR %s", err.Error()))
+			return errors.UnprocessableEntity, nil
 		}
 	}
 	if len(workout.Title) >= 3 {
@@ -225,13 +236,14 @@ func (w *WorkoutRepo) Update(workoutUpdate model.WorkoutUpdate) (error, *model.W
 
 	rows, err := w.DB.Queryx(query+" RETURNING *", args...)
 	if err != nil {
-		return err, nil
+		return errors.UnprocessableEntity, nil
 	}
 	var workout model.Workout
 	if rows.Next() {
 		err = rows.Scan(&workout.ID, &workout.UserId, &workout.Title, &workout.Description, &workout.IsDone, &workout.AppointedTime, &workout.CreatedAt, &workout.UpdatedAt)
 		if err != nil {
-			return err, nil
+			w.logger.Error(fmt.Sprintf("row scan error: ERROR %s", err.Error()))
+			return errors.UnprocessableEntity, nil
 		}
 	}
 
@@ -241,19 +253,19 @@ func (w *WorkoutRepo) Update(workoutUpdate model.WorkoutUpdate) (error, *model.W
 func (w *WorkoutRepo) Delete(id, userId uint64) error {
 	res, err := w.DB.Exec("DELETE FROM "+model.WorkoutTable+" WHERE id=$1 AND user_id=$2", id, userId)
 	if err != nil {
-		return err
+		w.logger.Error(fmt.Sprintf("sql exec: ERROR %s", err.Error()))
+		return errors.UnprocessableEntity
 	}
 	count, err := res.RowsAffected()
 	if err != nil || count <= 0 {
-		return errors.New("not found")
+		return errors.NotFound
 	}
 
 	return nil
 }
 
 func (w *WorkoutRepo) addToWorkoutTitleRecommendation(title string) {
-	//TODO add logger
-	res, err := w.elastic.Index("friendly_sport_workout_recommendation", bytes.NewReader([]byte(fmt.Sprintf("{\"title\": \"%s\"}", title))))
-	log.Println(err)
-	log.Println(res)
+	_, err := w.elastic.Index("friendly_sport_workout_recommendation", bytes.NewReader([]byte(fmt.Sprintf("{\"title\": \"%s\"}", title))))
+	w.logger.Error(fmt.Sprintf("elastic add doc to indexerror: ERROR %s", err.Error()))
+
 }

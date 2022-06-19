@@ -91,8 +91,14 @@ func (s Server) Update(ctx context.Context, request *UpdateRequest) (*UpdateResp
 
 func (s Server) All(ctx context.Context, request *WorkoutFilteringRequest) (*WorkoutFilteringResponse, error) {
 	var workoutsFiltering model.WorkoutsFiltering
-	json.Unmarshal(request.Query, &workoutsFiltering)
-	err, res := s.workout.GetAll(request.UserId, workoutsFiltering)
+	err := json.Unmarshal(request.Query, &workoutsFiltering)
+	if err != nil {
+		return &WorkoutFilteringResponse{
+			Error:  err.Error(),
+			Status: http.StatusBadRequest,
+		}, nil
+	}
+	err, _ = s.workout.GetAll(request.UserId, workoutsFiltering)
 	if err != nil {
 		return &WorkoutFilteringResponse{
 			Error:  err.Error(),
@@ -100,37 +106,10 @@ func (s Server) All(ctx context.Context, request *WorkoutFilteringRequest) (*Wor
 		}, nil
 	}
 
-	var workoutsList []*Workout
-	for _, workout := range res {
-		var appointedTime int64
-		if workout.AppointedTime != nil {
-			appointedTime = workout.AppointedTime.Unix()
-		}
-		jsonExercises, _ := json.Marshal(workout.Exercises)
-		var exercises []*Exercises
-		err = json.Unmarshal(jsonExercises, &exercises)
-		workoutsList = append(workoutsList, &Workout{
-			Id:            workout.ID,
-			Title:         workout.Title,
-			Description:   workout.Description,
-			UserId:        workout.UserId,
-			IsDone:        workout.IsDone,
-			AppointedTime: appointedTime,
-			CreatedAt:     workout.CreatedAt.Unix(),
-			UpdatedAt:     workout.UpdatedAt.Unix(),
-			Exercise:      exercises,
-		})
-	}
-
 	return &WorkoutFilteringResponse{
 		Status:  http.StatusOK,
-		Workout: workoutsList,
+		Workout: nil,
 	}, nil
-}
-
-func (s Server) mustEmbedUnimplementedWorkoutServiceServer() {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (s Server) WorkoutTitleRecommendation(ctx context.Context, request *WorkoutTitleRecommendationRequest) (*WorkoutTitleRecommendationResponse, error) {
@@ -151,4 +130,9 @@ func (s Server) WorkoutTitleRecommendation(ctx context.Context, request *Workout
 		Status:             http.StatusOK,
 		RecommendationList: recommendations,
 	}, nil
+}
+
+func (s Server) mustEmbedUnimplementedWorkoutServiceServer() {
+	//TODO implement me
+	panic("implement me")
 }

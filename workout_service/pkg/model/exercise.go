@@ -11,10 +11,11 @@ type Exercise struct {
 }
 
 type ExerciseIntoWorkout struct {
-	ID          uint64 `json:"id"`
-	Title       string `json:"title" `
-	Description string `json:"description" `
-	IsDone      bool   `json:"is_done" `
+	ID          uint64                    `json:"id"`
+	Title       string                    `json:"title" `
+	Description string                    `json:"description" `
+	IsDone      bool                      `json:"is_done" `
+	Repetitions []*RepetitionIntoExercise `json:"repetitions"`
 }
 
 type ExerciseUpdate struct {

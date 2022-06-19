@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/pavel/workout_service/pkg/logger"
 	"github.com/pavel/workout_service/pkg/model"
 	"github.com/pavel/workout_service/pkg/repository"
 )
@@ -14,12 +15,14 @@ type Workout interface {
 }
 
 type WorkoutService struct {
-	repo repository.Workout
+	repo   repository.Workout
+	logger logger.Logging
 }
 
-func InitWorkoutService(repo repository.Workout) *WorkoutService {
+func InitWorkoutService(logger logger.Logging, repo repository.Workout) *WorkoutService {
 	return &WorkoutService{
-		repo: repo,
+		repo:   repo,
+		logger: logger,
 	}
 }
 

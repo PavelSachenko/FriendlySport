@@ -1,94 +1,90 @@
 package main
 
 import (
+	"fmt"
 	"github.com/pavel/workout_service/config"
 	"github.com/pavel/workout_service/pkg/db"
+	"github.com/pavel/workout_service/pkg/logger"
+	"github.com/pavel/workout_service/pkg/pb"
 	"github.com/pavel/workout_service/pkg/pb/workout"
 	"github.com/pavel/workout_service/pkg/repository"
 	"github.com/pavel/workout_service/pkg/service"
 	"google.golang.org/grpc"
-	"log"
 	"net"
 )
 
-type Servers struct {
-	Workout *workout.Server
+type gRPCServices struct {
+	Workout *pb.Server
 }
 
 func main() {
+	logger := logger.InitLogrusLogger()
+	cfg := getConfig(logger)
+	lis := getTCPServer(logger, cfg)
+	gRPCServices := getGRPCServices(logger, cfg)
+	InitGrpcServer(logger, lis, gRPCServices)
+}
 
-	//test := context.WithValue(context.Background(), "id", "asd")
-	//id := uint64(test.Value("id").(int))
-	//fmt.Println(id)
-	//return
-	log.Printf("Initial user service config\r\n")
+func getConfig(logger *logger.Logger) *config.Config {
+	logger.Info("Init config")
 	err, cfg := config.InitConfig()
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatal(fmt.Sprintf("Failed init config. ERROR: %v", err))
 	}
+	return cfg
+}
 
-	//err, postgres := db.InitPostgres(cfg, db.InitPostgresQueryBuilder())
-	//if err != nil {
-	//	log.Fatalln(err)
-	//}
-	//
-	////repo := repository.InitExerciseRepo(postgres)
-	//ctx := context.WithValue(context.Background(), "user_id", 1)
-	//ctx = context.WithValue(ctx, "workout_id", 3)
-	//ctx = context.WithValue(ctx, "id", 3)
-	//fmt.Println(ctx.Value("user_id"))
-	////return
-	////temp := "test"
-	////err, res := repo.Update(ctx, model.ExerciseUpdate{Description: &temp})
-	////if err != nil {
-	////	log.Fatalln(err)
-	////}
-	//repo := repository.InitWorkoutRepo(postgres, nil)
-	//err, res := repo.All(1, model.WorkoutsFiltering{Limit: 10, Offset: 0})
-	//if err != nil {
-	//	log.Fatalln(err)
-	//}
-	//fmt.Println(res[0])
-	//return
+func getTCPServer(logger *logger.Logger, cfg *config.Config) net.Listener {
+	logger.Info("Init tcp server")
 	lis, err := net.Listen("tcp", cfg.Server.Port)
 	if err != nil {
-		log.Fatalf("Tcp server error: %v\r\n", err)
+		logger.Fatal(fmt.Sprintf("Failed init tcp server. ERROR: %s", err))
+	}
+	logger.Info(fmt.Sprintf("Server address: %s", lis.Addr().Network()))
+	return lis
+}
+
+func getGRPCServices(logger *logger.Logger, cfg *config.Config) *gRPCServices {
+	logger.Info(fmt.Sprintf("Init gRPC services"))
+	err, gRPCServices := initGRPCServices(logger, cfg)
+	if err != nil {
+		logger.Info(fmt.Sprintf("Failed init gRPC services. ERROR: %s", err))
+	}
+	return gRPCServices
+}
+
+func initGRPCServices(logger logger.Logging, cfg *config.Config) (error, *gRPCServices) {
+
+	logger.Info("Init Postgres DB")
+	err, postgres := db.InitPostgres(cfg, db.InitPostgresQueryBuilder())
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("Not connected to postgres. ERROR: %s", err.Error()))
+	}
+	logger.Info("Init ElasticSearch DB")
+	err, elasticClient := db.InitElastic(cfg)
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("Not connected to ElasticSearch. ERROR: %s", err.Error()))
+		return err, nil
 	}
 
-	err, gRPCServers := initGRPCServices(cfg)
-	if err != nil {
-		log.Fatalf("Not init gRPC server: %v", err)
-	}
-	grpcServer := grpc.NewServer()
-	workout.RegisterWorkoutServiceServer(grpcServer, gRPCServers.Workout)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalln("Failed to serve:", err)
+	logger.Info("Init workout service")
+	workoutRepo := repository.InitWorkoutRepo(logger, postgres, elasticClient)
+	workoutService := service.InitWorkoutService(logger, workoutRepo)
+
+	logger.Info("Init workout gGRPC server")
+	workoutServer := pb.InitGRPCWorkoutServer(
+		workoutService,
+	)
+	return nil, &gRPCServices{
+		Workout: workoutServer,
 	}
 }
 
-func initGRPCServices(cfg *config.Config) (error, *Servers) {
-
-	log.Printf("Init Postgres\r\n")
-	err, postgres := db.InitPostgres(cfg, db.InitPostgresQueryBuilder())
-	if err != nil {
-		log.Fatalf("Not connected to postgres: %v\r\n", err.Error())
-		return err, nil
-	}
-	log.Printf("Init Postgres\r\n")
-	err, elasticClient := db.InitElastic(cfg)
-	if err != nil {
-		log.Fatalf("Not connected to postgres: %v\r\n", err.Error())
-		return err, nil
-	}
-	log.Printf("Init Workout service\r\n")
-	workoutRepo := repository.InitWorkoutRepo(postgres, elasticClient)
-	workoutService := service.InitWorkoutService(workoutRepo)
-
-	log.Printf("Init Workout server\r\n")
-	workoutServer := workout.InitGRPCWorkoutServer(
-		workoutService,
-	)
-	return nil, &Servers{
-		Workout: workoutServer,
+func InitGrpcServer(logger logger.Logging, lis net.Listener, services *gRPCServices) {
+	logger.Info(fmt.Sprintf("Init gRPC server"))
+	grpcServer := grpc.NewServer()
+	workout.RegisterWorkoutServiceServer(grpcServer, services.Workout)
+	if err := grpcServer.Serve(lis); err != nil {
+		logger.Info(fmt.Sprintf("Failed serve gRPC server. ERROR: %s", err))
 	}
 }

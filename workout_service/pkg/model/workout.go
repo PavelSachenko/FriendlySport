@@ -1,8 +1,12 @@
 package model
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 var WorkoutTable = "workouts"
+var WorkoutView = "workouts_objects"
 
 type Workout struct {
 	ID            uint64                 `json:"id" sql:"id" db:"id"`
@@ -14,6 +18,21 @@ type Workout struct {
 	CreatedAt     time.Time              `json:"created_at" db:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at" db:"updated_at"`
 	Exercises     []*ExerciseIntoWorkout `json:"exercises"`
+}
+
+func (u *Workout) MarshalJSON() ([]byte, error) {
+	type workout Workout
+	return json.Marshal(&struct {
+		*workout
+		UpdatedAt     int64 `json:"updated_at"`
+		CreatedAt     int64 `json:"created_at"`
+		AppointedTime int64 `json:"appointed_time"`
+	}{
+		workout:       (*workout)(u),
+		UpdatedAt:     u.UpdatedAt.UTC().Unix(),
+		CreatedAt:     u.CreatedAt.UTC().Unix(),
+		AppointedTime: u.AppointedTime.UTC().Unix(),
+	})
 }
 
 type WorkoutsFiltering struct {
