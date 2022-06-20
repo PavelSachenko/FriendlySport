@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"log"
 	"sync"
@@ -25,7 +26,8 @@ var (
 	once     sync.Once
 )
 
-func InitConfig() (error, *Config) {
+func InitConfig(logger *logrus.Logger) (error, *Config) {
+	logger.Info("init config")
 	var err error
 	once.Do(func() {
 		log.Printf("Init config")

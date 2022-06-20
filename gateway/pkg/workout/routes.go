@@ -7,11 +7,11 @@ import (
 	"github.com/pavel/gateway/pkg/workout/handlers"
 )
 
-func RegisterRoute(r *gin.Engine, cfg config.Config, authSvc user.ServiceClient) {
+func RegisterRoute(r *gin.RouterGroup, cfg config.Config, authSvc user.ServiceClient) {
 	svc := InitServiceClient(cfg)
 	authMiddleware := user.InitAuthMiddleware(authSvc)
-	r.GET("api/workouts", svc.workouts).Use(authMiddleware.AuthRequired)
-	routes := r.Group("api/workout").Use(authMiddleware.AuthRequired)
+	r.GET("workouts", svc.workouts).Use(authMiddleware.AuthRequired)
+	routes := r.Group("workout").Use(authMiddleware.AuthRequired)
 	routes.POST("/create", svc.workoutCreate)
 	routes.DELETE("/:id", svc.workoutDelete)
 	routes.PUT("/:id", svc.workoutUpdate)

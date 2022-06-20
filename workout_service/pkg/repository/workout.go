@@ -28,10 +28,10 @@ type Workout interface {
 type WorkoutRepo struct {
 	*db.DB
 	elastic *elasticsearch.Client
-	logger  logger.Logging
+	logger  *logger.Logger
 }
 
-func InitWorkoutRepo(logger logger.Logging, db *db.DB, elClient *elasticsearch.Client) *WorkoutRepo {
+func InitWorkoutRepo(logger *logger.Logger, db *db.DB, elClient *elasticsearch.Client) *WorkoutRepo {
 	return &WorkoutRepo{
 		DB:      db,
 		elastic: elClient,
@@ -188,7 +188,7 @@ func (w *WorkoutRepo) Create(workout *model.Workout) (error, *model.Workout) {
 	workout.CreatedAt = dateNow
 	workout.UpdatedAt = dateNow
 	sql := fmt.Sprintf("INSERT INTO %s (user_id, title, description, appointed_time, created_at, updated_at) ", model.WorkoutTable)
-	rows, err := w.Queryx(sql+"VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+	rows, err := w.Queryx(sql+"VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
 		workout.UserId,
 		workout.Title,
 		workout.Description,
@@ -240,11 +240,13 @@ func (w *WorkoutRepo) Update(workoutUpdate model.WorkoutUpdate) (error, *model.W
 	}
 	var workout model.Workout
 	if rows.Next() {
-		err = rows.Scan(&workout.ID, &workout.UserId, &workout.Title, &workout.Description, &workout.IsDone, &workout.AppointedTime, &workout.CreatedAt, &workout.UpdatedAt)
+		err = rows.StructScan(&workout)
 		if err != nil {
 			w.logger.Error(fmt.Sprintf("row scan error: ERROR %s", err.Error()))
 			return errors.UnprocessableEntity, nil
 		}
+	} else {
+		return errors.NotFound, nil
 	}
 
 	return nil, &workout
@@ -256,6 +258,7 @@ func (w *WorkoutRepo) Delete(id, userId uint64) error {
 		w.logger.Error(fmt.Sprintf("sql exec: ERROR %s", err.Error()))
 		return errors.UnprocessableEntity
 	}
+
 	count, err := res.RowsAffected()
 	if err != nil || count <= 0 {
 		return errors.NotFound
@@ -266,6 +269,8 @@ func (w *WorkoutRepo) Delete(id, userId uint64) error {
 
 func (w *WorkoutRepo) addToWorkoutTitleRecommendation(title string) {
 	_, err := w.elastic.Index("friendly_sport_workout_recommendation", bytes.NewReader([]byte(fmt.Sprintf("{\"title\": \"%s\"}", title))))
-	w.logger.Error(fmt.Sprintf("elastic add doc to indexerror: ERROR %s", err.Error()))
+	if err != nil {
+		w.logger.Errorf("elastic add doc to indexerror: ERROR %s", err.Error())
+	}
 
 }

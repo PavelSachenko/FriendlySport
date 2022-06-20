@@ -22,6 +22,10 @@ type Workout struct {
 
 func (u *Workout) MarshalJSON() ([]byte, error) {
 	type workout Workout
+	var unixAppointedTime int64
+	if u.AppointedTime != nil {
+		unixAppointedTime = u.AppointedTime.UTC().Unix()
+	}
 	return json.Marshal(&struct {
 		*workout
 		UpdatedAt     int64 `json:"updated_at"`
@@ -31,8 +35,9 @@ func (u *Workout) MarshalJSON() ([]byte, error) {
 		workout:       (*workout)(u),
 		UpdatedAt:     u.UpdatedAt.UTC().Unix(),
 		CreatedAt:     u.CreatedAt.UTC().Unix(),
-		AppointedTime: u.AppointedTime.UTC().Unix(),
+		AppointedTime: unixAppointedTime,
 	})
+
 }
 
 type WorkoutsFiltering struct {

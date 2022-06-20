@@ -40,8 +40,8 @@ func WorkoutUpdate(ctx *gin.Context, c workout.WorkoutServiceClient) {
 
 	query, _ := json.Marshal(workoutUpdate)
 	res, err := c.Update(context.Background(), &workout.UpdateRequest{Id: id, UserId: userId, Query: query})
-	if err != nil || res.Status != http.StatusOK {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, err.Error())
+	if err != nil || res.Status >= http.StatusBadRequest {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, res)
 		return
 	}
 	ctx.JSON(http.StatusOK, res)

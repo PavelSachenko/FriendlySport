@@ -18,10 +18,10 @@ type Exercise interface {
 
 type ExerciseRepo struct {
 	*db.DB
-	logger logger.Logging
+	logger logger.Logger
 }
 
-func InitExerciseRepo(logger logger.Logging, db *db.DB) ExerciseRepo {
+func InitExerciseRepo(logger logger.Logger, db *db.DB) ExerciseRepo {
 	return ExerciseRepo{
 		DB:     db,
 		logger: logger,

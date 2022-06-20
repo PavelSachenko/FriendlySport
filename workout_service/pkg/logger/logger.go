@@ -10,15 +10,6 @@ import (
 	"runtime"
 )
 
-type Logging interface {
-	Info(msg string)
-	Warning(msg string)
-	Error(msg string)
-	Debug(msg string)
-	Trace(msg string)
-	Fatal(msg string)
-}
-
 type LogHooks struct {
 	LogLevels []logrus.Level
 	Writer    io.Writer
@@ -38,45 +29,26 @@ func (l LogHooks) Fire(entry *logrus.Entry) error {
 }
 
 type Logger struct {
-	*logrus.Logger
+	*logrus.Entry
 }
 
-func (l Logger) Info(msg string) {
-	l.Logger.Info(msg)
-}
+var e *logrus.Entry
 
-func (l Logger) Warning(msg string) {
-	l.Logger.Warning(msg)
+func GetLogger() *Logger {
+	return &Logger{e}
 }
-
-func (l Logger) Error(msg string) {
-	l.Logger.Error(msg)
-}
-
-func (l Logger) Debug(msg string) {
-	l.Logger.Debug(msg)
-}
-
-func (l Logger) Trace(msg string) {
-	l.Logger.Trace(msg)
-}
-
-func (l Logger) Fatal(msg string) {
-	l.Logger.Fatal(msg)
-}
-
-func InitLogrusLogger() *Logger {
+func init() {
 
 	l := logrus.New()
 	l.SetReportCaller(true)
 	l.Info("Init logrus logger")
-	l.Formatter = &logrus.JSONFormatter{
+	l.SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: "2006-01-02 15:04:05",
 		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
 			filename := path.Base(frame.File)
 			return fmt.Sprintf("%s()", frame.Function), fmt.Sprintf("%s:%d", filename, frame.Line)
 		},
-	}
+	})
 	_, filename, _, _ := runtime.Caller(0)
 	dir := path.Join(path.Dir(filename), "../../..")
 	file, err := os.OpenFile(dir+"/logs/workout.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
@@ -98,7 +70,5 @@ func InitLogrusLogger() *Logger {
 		Writer:    os.Stdout,
 		LogLevels: logrus.AllLevels,
 	})
-	return &Logger{
-		Logger: l,
-	}
+	e = logrus.NewEntry(l)
 }

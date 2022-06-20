@@ -16,10 +16,10 @@ type Workout interface {
 
 type WorkoutService struct {
 	repo   repository.Workout
-	logger logger.Logging
+	logger *logger.Logger
 }
 
-func InitWorkoutService(logger logger.Logging, repo repository.Workout) *WorkoutService {
+func InitWorkoutService(logger *logger.Logger, repo repository.Workout) *WorkoutService {
 	return &WorkoutService{
 		repo:   repo,
 		logger: logger,

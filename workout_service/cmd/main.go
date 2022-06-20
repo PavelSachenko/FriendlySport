@@ -18,7 +18,8 @@ type gRPCServices struct {
 }
 
 func main() {
-	logger := logger.InitLogrusLogger()
+	logger := logger.GetLogger()
+	logger.Info("test")
 	cfg := getConfig(logger)
 	lis := getTCPServer(logger, cfg)
 	gRPCServices := getGRPCServices(logger, cfg)
@@ -27,7 +28,7 @@ func main() {
 
 func getConfig(logger *logger.Logger) *config.Config {
 	logger.Info("Init config")
-	err, cfg := config.InitConfig()
+	err, cfg := config.InitConfig(logger)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Failed init config. ERROR: %v", err))
 	}
@@ -53,7 +54,7 @@ func getGRPCServices(logger *logger.Logger, cfg *config.Config) *gRPCServices {
 	return gRPCServices
 }
 
-func initGRPCServices(logger logger.Logging, cfg *config.Config) (error, *gRPCServices) {
+func initGRPCServices(logger *logger.Logger, cfg *config.Config) (error, *gRPCServices) {
 
 	logger.Info("Init Postgres DB")
 	err, postgres := db.InitPostgres(cfg, db.InitPostgresQueryBuilder())
@@ -74,13 +75,14 @@ func initGRPCServices(logger logger.Logging, cfg *config.Config) (error, *gRPCSe
 	logger.Info("Init workout gGRPC server")
 	workoutServer := pb.InitGRPCWorkoutServer(
 		workoutService,
+		logger,
 	)
 	return nil, &gRPCServices{
 		Workout: workoutServer,
 	}
 }
 
-func InitGrpcServer(logger logger.Logging, lis net.Listener, services *gRPCServices) {
+func InitGrpcServer(logger *logger.Logger, lis net.Listener, services *gRPCServices) {
 	logger.Info(fmt.Sprintf("Init gRPC server"))
 	grpcServer := grpc.NewServer()
 	workout.RegisterWorkoutServiceServer(grpcServer, services.Workout)

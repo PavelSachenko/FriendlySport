@@ -6,7 +6,7 @@ import (
 	"github.com/pavel/gateway/pkg/user/handlers"
 )
 
-func RegisterRoute(r *gin.Engine, cfg config.Config) ServiceClient {
+func RegisterRoute(r *gin.RouterGroup, cfg config.Config) ServiceClient {
 	svc := InitServiceClient(cfg)
 	authMiddleware := AuthMiddleware{svc: svc}
 	r.GET("roles", svc.roles)

@@ -36,8 +36,8 @@ func WorkoutsAll(ctx *gin.Context, c workout.WorkoutServiceClient) {
 		Query:  query,
 		UserId: userId,
 	})
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, err)
+	if res.Status >= 400 {
+		ctx.AbortWithStatusJSON(int(res.Status), res)
 		return
 	}
 	ctx.JSON(http.StatusOK, res)
