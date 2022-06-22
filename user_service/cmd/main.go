@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/pavel/user_service/config"
 	"github.com/pavel/user_service/pkg/db"
+	"github.com/pavel/user_service/pkg/logger"
+	"github.com/pavel/user_service/pkg/pb"
 	"github.com/pavel/user_service/pkg/pb/auth"
 	"github.com/pavel/user_service/pkg/pb/role"
 	"github.com/pavel/user_service/pkg/pb/user"
@@ -15,78 +16,82 @@ import (
 	"net"
 )
 
-type Servers struct {
-	Auth *auth.Server
-	Role *role.Server
-	User *user.Server
+type gRPCServices struct {
+	Auth *pb.GRPCAuthService
+	Role *pb.GRPCRoleService
+	User *pb.GRPCUserService
 }
 
 func main() {
-	log.Printf("Initial user service config\r\n")
+	logger := logger.GetLogger()
+	logger.Info("Initial user service config")
 	err, cfg := config.InitConfig()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Printf("cfg: %v\r\n", cfg)
-	log.Printf("Initial user service tcp server\r\n")
+	logger.Infof("cfg: %v", cfg)
+	logger.Info("Initial user service tcp server")
 	lis, err := net.Listen("tcp", cfg.Server.Port)
 	if err != nil {
-		log.Fatalf("Tcp server error: %v\r\n", err)
+		logger.Fatalf("Tcp server error: %v", err)
 	}
 
-	err, gRPCServers := initGRPCServices(cfg)
+	err, gRPCServers := initGRPCServices(cfg, logger)
 	if err != nil {
-		log.Fatalf("Not init gRPC server: %v", err)
+		logger.Fatalf("Not init gRPC server: %v", err)
 	}
 	grpcServer := grpc.NewServer()
 	auth.RegisterAuthServiceServer(grpcServer, gRPCServers.Auth)
 	role.RegisterRoleServiceServer(grpcServer, gRPCServers.Role)
 	user.RegisterUserServiceServer(grpcServer, gRPCServers.User)
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalln("Failed to serve:", err)
+		logger.Fatalf("Failed to serve: %v", err)
 	}
 }
 
-func initGRPCServices(cfg *config.Config) (error, *Servers) {
-	log.Printf("Init redis\r\n")
+func initGRPCServices(cfg *config.Config, logger *logger.Logger) (error, *gRPCServices) {
+	logger.Info("Init redis")
 	err, redisDB := db.InitRedis(cfg)
 	if err != nil {
-		log.Fatalf("Not connected to redis\r\n")
+		logger.Fatalf("Not connected to redis: err %v", err)
 		return err, nil
 	}
-	log.Printf("Init Postgres\r\n")
+	logger.Info("Init Postgres\r\n")
 	err, postgres := db.InitPostgres(cfg)
 	if err != nil {
-		log.Fatalf("Not connected to postgres: %v\r\n", err.Error())
+		logger.Fatalf("Not connected to postgres: %v", err.Error())
 		return err, nil
 	}
 
-	log.Printf("Init Auth service\r\n")
-	authRepo := repository.InitAuthRedis(redisDB, postgres)
+	logger.Info("Init Auth service")
+	authRepo := repository.InitAuthRedis(redisDB, postgres, logger)
 	authService := service.NewAuthService(authRepo, cfg)
 
-	log.Printf("Init User service\r\n")
-	userRepo := repository.InitUserPostgres(postgres)
+	logger.Info("Init User service")
+	userRepo := repository.InitUserPostgres(postgres, logger)
 	userService := service.InitUserService(userRepo, cfg)
 
-	log.Printf("Init Role service\r\n")
-	roleRepo := repository.InitRolePostgres(postgres)
+	logger.Info("Init Role service")
+	roleRepo := repository.InitRolePostgres(postgres, logger)
 	roleService := service.InitRoleService(roleRepo)
 
-	authServer := auth.InitGRPCUserServer(
+	authServer := pb.InitGRPCAuthService(
 		*cfg,
 		authService,
 		userService,
 		roleService,
+		logger,
 	)
-	roleServer := role.InitGRPCRoleServer(
+	roleServer := pb.InitGRPCRoleServer(
 		roleService,
+		logger,
 	)
-	userServer := user.InitGRPCUserServer(
+	userServer := pb.InitGRPCUserService(
 		userService,
+		logger,
 	)
-	return nil, &Servers{
+	return nil, &gRPCServices{
 		Auth: authServer,
 		Role: roleServer,
 		User: userServer,

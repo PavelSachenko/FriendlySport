@@ -29,15 +29,15 @@ func WorkoutCreate(ctx *gin.Context, c workout.WorkoutServiceClient) {
 		return
 	}
 
-	res, err := c.Create(context.Background(), &workout.CreateRequest{
+	res, err := c.Create(context.Background(), &workout.CreateWorkoutRequest{
 		UserId:        userId,
 		Title:         workoutCreateRequest.Title,
 		Description:   workoutCreateRequest.Description,
 		AppointedTime: workoutCreateRequest.AppointedTime,
 	})
 
-	if err != nil || res.Status != http.StatusCreated {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, res)
+	if err != nil || res.Status >= http.StatusBadRequest {
+		ctx.AbortWithStatusJSON(int(res.Status), res)
 		return
 	}
 

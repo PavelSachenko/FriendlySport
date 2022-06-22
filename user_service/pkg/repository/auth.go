@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/go-redis/redis/v7"
 	"github.com/pavel/user_service/pkg/db"
+	"github.com/pavel/user_service/pkg/logger"
 	"github.com/pavel/user_service/pkg/model"
 	"strconv"
 	"time"
@@ -23,12 +24,14 @@ type Auth interface {
 type AuthRepo struct {
 	redis    *redis.Client
 	postgres *db.DB
+	logger   *logger.Logger
 }
 
-func InitAuthRedis(redis *redis.Client, postgres *db.DB) *AuthRepo {
+func InitAuthRedis(redis *redis.Client, postgres *db.DB, logger *logger.Logger) *AuthRepo {
 	return &AuthRepo{
 		redis:    redis,
 		postgres: postgres,
+		logger:   logger,
 	}
 }
 
@@ -39,11 +42,13 @@ func (a AuthRepo) SaveToken(userId uint64, token *model.TokenDetails) error {
 
 	err := a.redis.Set(token.AccessUuid, strconv.Itoa(int(userId)), at.Sub(now)).Err()
 	if err != nil {
+		a.logger.Error(err)
 		return err
 	}
 
 	err = a.redis.Set(token.RefreshUuid, strconv.Itoa(int(userId)), rt.Sub(now)).Err()
 	if err != nil {
+		a.logger.Error(err)
 		return err
 	}
 
@@ -53,6 +58,7 @@ func (a AuthRepo) SaveToken(userId uint64, token *model.TokenDetails) error {
 func (a AuthRepo) DeleteToken(uuid string) error {
 	deleted, err := a.redis.Del(uuid).Result()
 	if err != nil {
+		a.logger.Error(err)
 		return err
 	}
 	if deleted == 0 {
@@ -64,6 +70,7 @@ func (a AuthRepo) DeleteToken(uuid string) error {
 func (a AuthRepo) GetUserIdFromToken(uuid string) (error, uint64) {
 	userid, err := a.redis.Get(uuid).Result()
 	if err != nil {
+		a.logger.Error(err)
 		return err, 0
 	}
 	userID, _ := strconv.ParseUint(userid, 10, 64)
@@ -82,10 +89,12 @@ func (a AuthRepo) IsUserExist(password, email string) (error, uint64) {
 func (a AuthRepo) CreateUser(user *model.User, roleId uint32) (error, uint64) {
 	err := a.isUserEmailAlreadyExist(user.Email)
 	if err != nil {
+		a.logger.Error(err)
 		return err, 0
 	}
 	err = a.isRoleAvailableForUser(roleId)
 	if err != nil {
+		a.logger.Error(err)
 		return err, 0
 	}
 
@@ -101,6 +110,7 @@ func (a AuthRepo) CreateUser(user *model.User, roleId uint32) (error, uint64) {
 		err = rows.Scan(&user.ID)
 		if err != nil {
 			tx.Rollback()
+			a.logger.Error(err)
 			return err, 0
 		}
 	}
@@ -109,6 +119,7 @@ func (a AuthRepo) CreateUser(user *model.User, roleId uint32) (error, uint64) {
 	rows, err = tx.QueryContext(ctx, insertUserRoleSql, user.ID, roleId)
 	if err != nil {
 		tx.Rollback()
+		a.logger.Error(err)
 		return err, 0
 	}
 
@@ -117,6 +128,7 @@ func (a AuthRepo) CreateUser(user *model.User, roleId uint32) (error, uint64) {
 	}
 	err = tx.Commit()
 	if err != nil {
+		a.logger.Error(err)
 		return err, 0
 	}
 	return nil, user.ID
@@ -138,6 +150,7 @@ func (a *AuthRepo) isRoleAvailableForUser(roleId uint32) error {
 	var roleid uint64
 	err := a.postgres.Get(&roleid, "SELECT id FROM "+model.RoleTable+" WHERE "+model.RoleTable+".id=$1 AND title NOT IN ('admin') LIMIT 1", roleId)
 	if err != nil && err != sql.ErrNoRows {
+		a.logger.Error(err)
 		return err
 	}
 	if roleid == 0 {

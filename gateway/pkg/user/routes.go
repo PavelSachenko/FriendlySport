@@ -15,7 +15,6 @@ func RegisterRoute(r *gin.RouterGroup, cfg config.Config) ServiceClient {
 	routes.POST("register", svc.register)
 	routes.POST("logout", svc.logout).Use(authMiddleware.AuthRequired)
 	routes.POST("refresh", svc.refresh).Use(authMiddleware.AuthRequired)
-	routes.POST("test", svc.test).Use(authMiddleware.AuthRequired)
 	r.Use(authMiddleware.AuthRequired).GET("user", svc.user)
 
 	return svc
@@ -38,7 +37,4 @@ func (svc *ServiceClient) refresh(ctx *gin.Context) {
 }
 func (svc *ServiceClient) user(ctx *gin.Context) {
 	handlers.User(ctx, svc.User)
-}
-func (svc *ServiceClient) test(ctx *gin.Context) {
-	ctx.JSON(200, "Good")
 }

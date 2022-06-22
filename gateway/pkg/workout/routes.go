@@ -11,11 +11,18 @@ func RegisterRoute(r *gin.RouterGroup, cfg config.Config, authSvc user.ServiceCl
 	svc := InitServiceClient(cfg)
 	authMiddleware := user.InitAuthMiddleware(authSvc)
 	r.GET("workouts", svc.workouts).Use(authMiddleware.AuthRequired)
-	routes := r.Group("workout").Use(authMiddleware.AuthRequired)
-	routes.POST("/create", svc.workoutCreate)
-	routes.DELETE("/:id", svc.workoutDelete)
-	routes.PUT("/:id", svc.workoutUpdate)
-	routes.GET("/recommendation-title", svc.workoutRecommendationTitle)
+	workouts := r.Group("workout")
+	workouts.Use(authMiddleware.AuthRequired)
+	workouts.POST("/create", svc.workoutCreate)
+	workouts.DELETE("/:workout_id", svc.workoutDelete)
+	workouts.PUT("/:workout_id", svc.workoutUpdate)
+	workouts.GET("/recommendation-title", svc.workoutRecommendationTitle)
+
+	exercise := workouts.Group(":workout_id/exercise").Use(authMiddleware.AuthRequired)
+	exercise.POST("/", svc.exerciseCreate)
+	exercise.DELETE("/:exercise_id", svc.exerciseDelete)
+	exercise.PUT("/:exercise_id", svc.exerciseUpdate)
+	exercise.GET("/recommendation-title", svc.exerciseRecommendationTitle)
 }
 
 func (svc *ServiceClient) workoutCreate(ctx *gin.Context) {
@@ -36,4 +43,19 @@ func (svc *ServiceClient) workouts(ctx *gin.Context) {
 
 func (svc *ServiceClient) workoutRecommendationTitle(ctx *gin.Context) {
 	handlers.WorkoutRecommendationTitle(ctx, svc.Workout)
+}
+
+func (svc *ServiceClient) exerciseCreate(ctx *gin.Context) {
+	handlers.ExerciseCreate(ctx, svc.Exercise)
+}
+func (svc *ServiceClient) exerciseUpdate(ctx *gin.Context) {
+	handlers.ExerciseUpdate(ctx, svc.Exercise)
+}
+
+func (svc *ServiceClient) exerciseDelete(ctx *gin.Context) {
+	handlers.ExerciseDelete(ctx, svc.Exercise)
+}
+
+func (svc *ServiceClient) exerciseRecommendationTitle(ctx *gin.Context) {
+	handlers.ExerciseRecommendationTitle(ctx, svc.Exercise)
 }

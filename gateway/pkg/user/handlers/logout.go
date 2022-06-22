@@ -13,8 +13,8 @@ func Logout(ctx *gin.Context, c auth.AuthServiceClient) {
 	res, err := c.Logout(context.Background(), &auth.LogoutRequest{
 		Token: token,
 	})
-	if err != nil || res.Status != http.StatusNoContent {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, res)
+	if err != nil || res.Status >= http.StatusBadRequest {
+		ctx.AbortWithStatusJSON(int(res.Status), res)
 		return
 	}
 

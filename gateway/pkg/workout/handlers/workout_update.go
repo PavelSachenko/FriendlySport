@@ -32,16 +32,16 @@ func WorkoutUpdate(ctx *gin.Context, c workout.WorkoutServiceClient) {
 		return
 	}
 
-	id, err := strconv.ParseUint(ctx.Param("id"), 0, 64)
+	id, err := strconv.ParseUint(ctx.Param("workout_id"), 0, 64)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, err)
 		return
 	}
 
 	query, _ := json.Marshal(workoutUpdate)
-	res, err := c.Update(context.Background(), &workout.UpdateRequest{Id: id, UserId: userId, Query: query})
+	res, err := c.Update(context.Background(), &workout.UpdateWorkoutRequest{Id: id, UserId: userId, Query: query})
 	if err != nil || res.Status >= http.StatusBadRequest {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, res)
+		ctx.AbortWithStatusJSON(int(res.Status), res)
 		return
 	}
 	ctx.JSON(http.StatusOK, res)

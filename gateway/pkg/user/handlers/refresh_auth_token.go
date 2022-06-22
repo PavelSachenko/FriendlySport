@@ -25,8 +25,8 @@ func RefreshAuthToken(ctx *gin.Context, c auth.AuthServiceClient) {
 		RefreshToken: refreshRequest.RefreshToken,
 	})
 
-	if err != nil || res.Status != http.StatusOK {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, res)
+	if err != nil || res.Status >= http.StatusBadRequest {
+		ctx.AbortWithStatusJSON(int(res.Status), res)
 		return
 	}
 	http.SetCookie(ctx.Writer, &http.Cookie{

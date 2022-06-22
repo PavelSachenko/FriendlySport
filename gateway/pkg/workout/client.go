@@ -8,7 +8,8 @@ import (
 )
 
 type ServiceClient struct {
-	Workout workout.WorkoutServiceClient
+	Workout  workout.WorkoutServiceClient
+	Exercise workout.ExerciseServiceClient
 }
 
 func InitServiceClient(cfg config.Config) ServiceClient {
@@ -19,6 +20,7 @@ func InitServiceClient(cfg config.Config) ServiceClient {
 	}
 
 	return ServiceClient{
-		Workout: workout.NewWorkoutServiceClient(cc),
+		Workout:  workout.NewWorkoutServiceClient(cc),
+		Exercise: workout.NewExerciseServiceClient(cc),
 	}
 }

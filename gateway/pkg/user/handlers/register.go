@@ -30,8 +30,8 @@ func Register(ctx *gin.Context, c auth.AuthServiceClient) {
 		RoleId:   registerRequest.RoleId,
 	})
 
-	if err != nil || res.Status != http.StatusCreated {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, "Something went wrong")
+	if err != nil || res.Status >= http.StatusBadRequest {
+		ctx.AbortWithStatusJSON(int(res.Status), res)
 		return
 	}
 

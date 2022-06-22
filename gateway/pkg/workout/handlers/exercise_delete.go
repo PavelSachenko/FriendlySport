@@ -9,21 +9,29 @@ import (
 	"strconv"
 )
 
-func WorkoutDelete(ctx *gin.Context, c workout.WorkoutServiceClient) {
+func ExerciseDelete(ctx *gin.Context, c workout.ExerciseServiceClient) {
 	authError, userId := utils.GetUserIdFromContext(ctx)
 	if authError != nil {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, authError)
 		return
 	}
-	id, err := strconv.ParseUint(ctx.Param("workout_id"), 0, 64)
+	workoutId, err := strconv.ParseUint(ctx.Param("workout_id"), 0, 64)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, err)
 		return
 	}
-	res, err := c.Delete(context.Background(), &workout.DeleteWorkoutRequest{Id: id, UserId: userId})
+
+	exerciseId, err := strconv.ParseUint(ctx.Param("exercise_id"), 0, 64)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, err)
+		return
+	}
+
+	res, err := c.Delete(context.Background(), &workout.DeleteExerciseRequest{Id: exerciseId, UserId: userId, WorkoutId: workoutId})
 	if err != nil || res.Status >= http.StatusBadRequest {
 		ctx.AbortWithStatusJSON(int(res.Status), res.Error)
 		return
 	}
+
 	ctx.JSON(http.StatusNoContent, res)
 }
