@@ -1,56 +1,80 @@
 package repository
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/pavel/workout_service/pkg/db"
 	"github.com/pavel/workout_service/pkg/errors"
 	"github.com/pavel/workout_service/pkg/logger"
 	"github.com/pavel/workout_service/pkg/model"
+	"github.com/pavel/workout_service/utils"
 	"strings"
 )
 
 type Exercise interface {
-	Create(exercise model.Exercise) (error error, createdExercise *model.Exercise)
-	Delete(ctx context.Context) error
-	Update(ctx context.Context, update model.ExerciseUpdate) (error, *model.Exercise)
+	Create(userId uint64, exercise model.Exercise) (error error, createdExercise *model.Exercise)
+	Delete(id, userId, workoutId uint64) error
+	Update(update model.ExerciseUpdate) (error, *model.Exercise)
+	GetRecommendation(typingTitle string) (error, []*model.ExerciseRecommendation)
 }
 
-type ExerciseRepo struct {
+type ExercisePostgresRepo struct {
 	*db.DB
-	logger logger.Logger
+	elastic *elasticsearch.Client
+	logger  *logger.Logger
 }
 
-func InitExerciseRepo(logger logger.Logger, db *db.DB) ExerciseRepo {
-	return ExerciseRepo{
-		DB:     db,
-		logger: logger,
+func InitExercisePostgresRepo(logger *logger.Logger, db *db.DB, elClient *elasticsearch.Client) *ExercisePostgresRepo {
+	return &ExercisePostgresRepo{
+		DB:      db,
+		logger:  logger,
+		elastic: elClient,
 	}
 }
-func (e *ExerciseRepo) Create(exercise model.Exercise) (error error, createdExercise *model.Exercise) {
+
+func (e *ExercisePostgresRepo) Create(userId uint64, exercise model.Exercise) (error, *model.Exercise) {
+
+	res, err := e.Exec(fmt.Sprintf("SELECT id FROM %s WHERE user_id = $1 AND id = $2", model.WorkoutTable), userId, exercise.WorkoutId)
+	if err != nil {
+		e.logger.Error(err.Error())
+		return err, nil
+	}
+	isWorkoutExist, err := res.RowsAffected()
+	if err != nil || isWorkoutExist <= 0 {
+		e.logger.Error(err.Error())
+		return errors.NotFound, nil
+	}
+
 	sql := fmt.Sprintf("INSERT INTO %s (workout_id, title, description) ", model.ExerciseTable)
-	rows, err := e.Queryx(sql+"VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+	rows, err := e.Queryx(sql+"VALUES ($1, $2, $3) RETURNING *",
 		exercise.WorkoutId,
 		exercise.Title,
 		exercise.Description,
 	)
 	if err != nil {
+		e.logger.Error(err.Error())
 		return err, nil
 	}
+	var createdExercise model.Exercise
 	for rows.Next() {
 		err = rows.StructScan(&createdExercise)
 		if err != nil {
-			e.logger.Error(fmt.Sprintf("struct scan: ERROR %s", err.Error()))
+			e.logger.Errorf("struct scan: ERROR %s", err.Error())
 			return errors.UnprocessableEntity, nil
 		}
 	}
+	if len(createdExercise.Title) >= 3 {
+		e.addToExerciseTitleRecommendation(createdExercise.Title)
+	}
 
-	return nil, createdExercise
+	return nil, &createdExercise
 }
 
-func (e ExerciseRepo) Delete(ctx context.Context) error {
-
-	id, userId, workoutId := e.getIds(ctx)
+func (e ExercisePostgresRepo) Delete(id, userId, workoutId uint64) error {
 	res, err := e.Exec(fmt.Sprintf("DELETE FROM %s USING %s WHERE %s.user_id = $1 AND %s.id = $2 AND %s.id = $3",
 		model.ExerciseTable,
 		model.WorkoutTable,
@@ -70,8 +94,7 @@ func (e ExerciseRepo) Delete(ctx context.Context) error {
 	return nil
 }
 
-func (e ExerciseRepo) Update(ctx context.Context, update model.ExerciseUpdate) (error, *model.Exercise) {
-	id, userId, workoutId := e.getIds(ctx)
+func (e ExercisePostgresRepo) Update(update model.ExerciseUpdate) (error, *model.Exercise) {
 	args := make([]interface{}, 0)
 	sets := make([]string, 0)
 	argId := 1
@@ -93,7 +116,7 @@ func (e ExerciseRepo) Update(ctx context.Context, update model.ExerciseUpdate) (
 	setQuery := strings.Join(sets, ",")
 	sql := fmt.Sprintf("UPDATE %s as e SET %s FROM %s w WHERE w.id = e.workout_id AND e.id = $%d AND w.user_id = $%d AND e.workout_id = $%d RETURNING e.*",
 		model.ExerciseTable, setQuery, model.WorkoutTable, argId, argId+1, argId+2)
-	args = append(args, id, userId, workoutId)
+	args = append(args, update.Id, update.UserId, update.WorkoutId)
 	t, _ := e.Begin()
 	rows, err := t.Query(sql, args...)
 	if err != nil {
@@ -111,7 +134,7 @@ func (e ExerciseRepo) Update(ctx context.Context, update model.ExerciseUpdate) (
 		}
 	}
 	rows.NextResultSet()
-	_, err = t.Exec(fmt.Sprintf("UPDATE %s SET updated_at = now() WHERE user_id = $1 AND id = $2", model.WorkoutTable), userId, workoutId)
+	_, err = t.Exec(fmt.Sprintf("UPDATE %s SET updated_at = now() WHERE user_id = $1 AND id = $2", model.WorkoutTable), update.UserId, update.WorkoutId)
 	if err != nil {
 		t.Rollback()
 		e.logger.Error(fmt.Sprintf("sql exec: ERROR %s", err.Error()))
@@ -123,26 +146,99 @@ func (e ExerciseRepo) Update(ctx context.Context, update model.ExerciseUpdate) (
 		return errors.UnprocessableEntity, nil
 	}
 
+	if len(updatedExercise.Title) >= 3 {
+		e.addToExerciseTitleRecommendation(updatedExercise.Title)
+	}
+
 	return nil, &updatedExercise
 }
 
-func (e ExerciseRepo) getIds(ctx context.Context) (id, userId, workoutId uint64) {
+type elasticSearchExerciseRecommendationResults struct {
+	Total int                             `json:"total"`
+	Hits  []*model.ExerciseRecommendation `json:"hits"`
+}
 
-	defer func() {
-		if r := recover(); r != nil {
-			e.logger.Error(fmt.Sprintf("Converting error: ERROR %v", r))
+func (e *ExercisePostgresRepo) GetRecommendation(typingTitle string) (error, []*model.ExerciseRecommendation) {
+	err, res := e.searchRecommendationTitleByElastic(typingTitle)
+	if err != nil {
+		e.logger.Errorf("search recomendation from elastic error: ERROR %s", err.Error())
+		return errors.UnprocessableEntity, nil
+	}
+
+	err = utils.ValidateElasticResponse(res, e.logger)
+	if err != nil {
+		return err, nil
+	}
+	type envelopeResponse struct {
+		Took int
+		Hits struct {
+			Total struct {
+				Value int
+			}
+			Hits []struct {
+				ID     string          `json:"_id"`
+				Source json.RawMessage `json:"_source"`
+				Title  string          `json:"title"`
+			}
 		}
-	}()
+	}
+	var r envelopeResponse
+	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		return errors.UnprocessableEntity, nil
+	}
+	var results elasticSearchExerciseRecommendationResults
+	results.Total = r.Hits.Total.Value
+	for _, hit := range r.Hits.Hits {
+		var er model.ExerciseRecommendation
+		if err := json.Unmarshal(hit.Source, &er); err != nil {
+			e.logger.Errorf("json unmarshal error: ERROR %s", err.Error())
+			return errors.UnprocessableEntity, nil
+		}
+		results.Hits = append(results.Hits, &er)
+	}
 
-	if ctx.Value("id") != nil {
-		id = ctx.Value("id").(uint64)
+	return nil, results.Hits
+}
+
+func (w *ExercisePostgresRepo) searchRecommendationTitleByElastic(typingTitle string) (error, *esapi.Response) {
+	var buf bytes.Buffer
+	query := map[string]interface{}{
+		"query": map[string]interface{}{
+			"match": map[string]interface{}{
+				"title": map[string]interface{}{
+					"query":     typingTitle,
+					"fuzziness": 1,
+				},
+			},
+		},
+		"collapse": map[string]string{
+			"field": "title.keyword",
+		},
+		"size": "5",
 	}
-	if ctx.Value("user_id") != nil {
-		userId = ctx.Value("user_id").(uint64)
-	}
-	if ctx.Value("workout_id") != nil {
-		workoutId = ctx.Value("workout_id").(uint64)
+	if err := json.NewEncoder(&buf).Encode(query); err != nil {
+		w.logger.Error(fmt.Sprintf("json encoder error: ERROR %s", err.Error()))
+		return errors.UnprocessableEntity, nil
 	}
 
-	return id, userId, workoutId
+	res, err := w.elastic.Search(
+		w.elastic.Search.WithContext(context.Background()),
+		w.elastic.Search.WithIndex("friendly_sport_exercise_recommendation"),
+		w.elastic.Search.WithBody(&buf),
+		w.elastic.Search.WithPretty(),
+	)
+	if err != nil {
+		w.logger.Errorf("elastic search error: ERROR %s", err.Error())
+		return errors.UnprocessableEntity, nil
+	}
+
+	return nil, res
+}
+
+func (e ExercisePostgresRepo) addToExerciseTitleRecommendation(title string) {
+	_, err := e.elastic.Index("friendly_sport_exercise_recommendation", bytes.NewReader([]byte(fmt.Sprintf("{\"title\": \"%s\"}", title))))
+	if err != nil {
+		e.logger.Errorf("elastic add doc to indexerror: ERROR %s", err.Error())
+	}
+
 }

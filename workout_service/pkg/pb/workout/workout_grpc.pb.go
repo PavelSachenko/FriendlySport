@@ -22,9 +22,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WorkoutServiceClient interface {
-	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error)
-	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
-	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
+	Create(ctx context.Context, in *CreateWorkoutRequest, opts ...grpc.CallOption) (*CreateWorkoutResponse, error)
+	Delete(ctx context.Context, in *DeleteWorkoutRequest, opts ...grpc.CallOption) (*DeleteWorkoutResponse, error)
+	Update(ctx context.Context, in *UpdateWorkoutRequest, opts ...grpc.CallOption) (*UpdateWorkoutResponse, error)
 	All(ctx context.Context, in *WorkoutFilteringRequest, opts ...grpc.CallOption) (*WorkoutFilteringResponse, error)
 	WorkoutTitleRecommendation(ctx context.Context, in *WorkoutTitleRecommendationRequest, opts ...grpc.CallOption) (*WorkoutTitleRecommendationResponse, error)
 }
@@ -37,8 +37,8 @@ func NewWorkoutServiceClient(cc grpc.ClientConnInterface) WorkoutServiceClient {
 	return &workoutServiceClient{cc}
 }
 
-func (c *workoutServiceClient) Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error) {
-	out := new(CreateResponse)
+func (c *workoutServiceClient) Create(ctx context.Context, in *CreateWorkoutRequest, opts ...grpc.CallOption) (*CreateWorkoutResponse, error) {
+	out := new(CreateWorkoutResponse)
 	err := c.cc.Invoke(ctx, "/WorkoutService.WorkoutService/Create", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -46,8 +46,8 @@ func (c *workoutServiceClient) Create(ctx context.Context, in *CreateRequest, op
 	return out, nil
 }
 
-func (c *workoutServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
-	out := new(DeleteResponse)
+func (c *workoutServiceClient) Delete(ctx context.Context, in *DeleteWorkoutRequest, opts ...grpc.CallOption) (*DeleteWorkoutResponse, error) {
+	out := new(DeleteWorkoutResponse)
 	err := c.cc.Invoke(ctx, "/WorkoutService.WorkoutService/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -55,8 +55,8 @@ func (c *workoutServiceClient) Delete(ctx context.Context, in *DeleteRequest, op
 	return out, nil
 }
 
-func (c *workoutServiceClient) Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
-	out := new(UpdateResponse)
+func (c *workoutServiceClient) Update(ctx context.Context, in *UpdateWorkoutRequest, opts ...grpc.CallOption) (*UpdateWorkoutResponse, error) {
+	out := new(UpdateWorkoutResponse)
 	err := c.cc.Invoke(ctx, "/WorkoutService.WorkoutService/Update", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -86,9 +86,9 @@ func (c *workoutServiceClient) WorkoutTitleRecommendation(ctx context.Context, i
 // All implementations must embed UnimplementedWorkoutServiceServer
 // for forward compatibility
 type WorkoutServiceServer interface {
-	Create(context.Context, *CreateRequest) (*CreateResponse, error)
-	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
-	Update(context.Context, *UpdateRequest) (*UpdateResponse, error)
+	Create(context.Context, *CreateWorkoutRequest) (*CreateWorkoutResponse, error)
+	Delete(context.Context, *DeleteWorkoutRequest) (*DeleteWorkoutResponse, error)
+	Update(context.Context, *UpdateWorkoutRequest) (*UpdateWorkoutResponse, error)
 	All(context.Context, *WorkoutFilteringRequest) (*WorkoutFilteringResponse, error)
 	WorkoutTitleRecommendation(context.Context, *WorkoutTitleRecommendationRequest) (*WorkoutTitleRecommendationResponse, error)
 	mustEmbedUnimplementedWorkoutServiceServer()
@@ -98,13 +98,13 @@ type WorkoutServiceServer interface {
 type UnimplementedWorkoutServiceServer struct {
 }
 
-func (UnimplementedWorkoutServiceServer) Create(context.Context, *CreateRequest) (*CreateResponse, error) {
+func (UnimplementedWorkoutServiceServer) Create(context.Context, *CreateWorkoutRequest) (*CreateWorkoutResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedWorkoutServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+func (UnimplementedWorkoutServiceServer) Delete(context.Context, *DeleteWorkoutRequest) (*DeleteWorkoutResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
-func (UnimplementedWorkoutServiceServer) Update(context.Context, *UpdateRequest) (*UpdateResponse, error) {
+func (UnimplementedWorkoutServiceServer) Update(context.Context, *UpdateWorkoutRequest) (*UpdateWorkoutResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedWorkoutServiceServer) All(context.Context, *WorkoutFilteringRequest) (*WorkoutFilteringResponse, error) {
@@ -127,7 +127,7 @@ func RegisterWorkoutServiceServer(s grpc.ServiceRegistrar, srv WorkoutServiceSer
 }
 
 func _WorkoutService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateRequest)
+	in := new(CreateWorkoutRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -139,13 +139,13 @@ func _WorkoutService_Create_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/WorkoutService.WorkoutService/Create",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkoutServiceServer).Create(ctx, req.(*CreateRequest))
+		return srv.(WorkoutServiceServer).Create(ctx, req.(*CreateWorkoutRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _WorkoutService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteRequest)
+	in := new(DeleteWorkoutRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -157,13 +157,13 @@ func _WorkoutService_Delete_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/WorkoutService.WorkoutService/Delete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkoutServiceServer).Delete(ctx, req.(*DeleteRequest))
+		return srv.(WorkoutServiceServer).Delete(ctx, req.(*DeleteWorkoutRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _WorkoutService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateRequest)
+	in := new(UpdateWorkoutRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func _WorkoutService_Update_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/WorkoutService.WorkoutService/Update",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkoutServiceServer).Update(ctx, req.(*UpdateRequest))
+		return srv.(WorkoutServiceServer).Update(ctx, req.(*UpdateWorkoutRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -242,6 +242,200 @@ var WorkoutService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WorkoutTitleRecommendation",
 			Handler:    _WorkoutService_WorkoutTitleRecommendation_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/pb/workout/workout.proto",
+}
+
+// ExerciseServiceClient is the client API for ExerciseService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ExerciseServiceClient interface {
+	Create(ctx context.Context, in *CreateExerciseRequest, opts ...grpc.CallOption) (*CreateExerciseResponse, error)
+	Update(ctx context.Context, in *UpdateExerciseRequest, opts ...grpc.CallOption) (*UpdateExerciseResponse, error)
+	Delete(ctx context.Context, in *DeleteExerciseRequest, opts ...grpc.CallOption) (*DeleteExerciseResponse, error)
+	ExerciseTitleRecommendation(ctx context.Context, in *ExerciseTitleRecommendationRequest, opts ...grpc.CallOption) (*ExerciseTitleRecommendationResponse, error)
+}
+
+type exerciseServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewExerciseServiceClient(cc grpc.ClientConnInterface) ExerciseServiceClient {
+	return &exerciseServiceClient{cc}
+}
+
+func (c *exerciseServiceClient) Create(ctx context.Context, in *CreateExerciseRequest, opts ...grpc.CallOption) (*CreateExerciseResponse, error) {
+	out := new(CreateExerciseResponse)
+	err := c.cc.Invoke(ctx, "/WorkoutService.ExerciseService/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *exerciseServiceClient) Update(ctx context.Context, in *UpdateExerciseRequest, opts ...grpc.CallOption) (*UpdateExerciseResponse, error) {
+	out := new(UpdateExerciseResponse)
+	err := c.cc.Invoke(ctx, "/WorkoutService.ExerciseService/Update", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *exerciseServiceClient) Delete(ctx context.Context, in *DeleteExerciseRequest, opts ...grpc.CallOption) (*DeleteExerciseResponse, error) {
+	out := new(DeleteExerciseResponse)
+	err := c.cc.Invoke(ctx, "/WorkoutService.ExerciseService/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *exerciseServiceClient) ExerciseTitleRecommendation(ctx context.Context, in *ExerciseTitleRecommendationRequest, opts ...grpc.CallOption) (*ExerciseTitleRecommendationResponse, error) {
+	out := new(ExerciseTitleRecommendationResponse)
+	err := c.cc.Invoke(ctx, "/WorkoutService.ExerciseService/ExerciseTitleRecommendation", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ExerciseServiceServer is the server API for ExerciseService service.
+// All implementations must embed UnimplementedExerciseServiceServer
+// for forward compatibility
+type ExerciseServiceServer interface {
+	Create(context.Context, *CreateExerciseRequest) (*CreateExerciseResponse, error)
+	Update(context.Context, *UpdateExerciseRequest) (*UpdateExerciseResponse, error)
+	Delete(context.Context, *DeleteExerciseRequest) (*DeleteExerciseResponse, error)
+	ExerciseTitleRecommendation(context.Context, *ExerciseTitleRecommendationRequest) (*ExerciseTitleRecommendationResponse, error)
+	mustEmbedUnimplementedExerciseServiceServer()
+}
+
+// UnimplementedExerciseServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedExerciseServiceServer struct {
+}
+
+func (UnimplementedExerciseServiceServer) Create(context.Context, *CreateExerciseRequest) (*CreateExerciseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedExerciseServiceServer) Update(context.Context, *UpdateExerciseRequest) (*UpdateExerciseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
+}
+func (UnimplementedExerciseServiceServer) Delete(context.Context, *DeleteExerciseRequest) (*DeleteExerciseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedExerciseServiceServer) ExerciseTitleRecommendation(context.Context, *ExerciseTitleRecommendationRequest) (*ExerciseTitleRecommendationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExerciseTitleRecommendation not implemented")
+}
+func (UnimplementedExerciseServiceServer) mustEmbedUnimplementedExerciseServiceServer() {}
+
+// UnsafeExerciseServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ExerciseServiceServer will
+// result in compilation errors.
+type UnsafeExerciseServiceServer interface {
+	mustEmbedUnimplementedExerciseServiceServer()
+}
+
+func RegisterExerciseServiceServer(s grpc.ServiceRegistrar, srv ExerciseServiceServer) {
+	s.RegisterService(&ExerciseService_ServiceDesc, srv)
+}
+
+func _ExerciseService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateExerciseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExerciseServiceServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/WorkoutService.ExerciseService/Create",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExerciseServiceServer).Create(ctx, req.(*CreateExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ExerciseService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateExerciseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExerciseServiceServer).Update(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/WorkoutService.ExerciseService/Update",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExerciseServiceServer).Update(ctx, req.(*UpdateExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ExerciseService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteExerciseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExerciseServiceServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/WorkoutService.ExerciseService/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExerciseServiceServer).Delete(ctx, req.(*DeleteExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ExerciseService_ExerciseTitleRecommendation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExerciseTitleRecommendationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExerciseServiceServer).ExerciseTitleRecommendation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/WorkoutService.ExerciseService/ExerciseTitleRecommendation",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExerciseServiceServer).ExerciseTitleRecommendation(ctx, req.(*ExerciseTitleRecommendationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ExerciseService_ServiceDesc is the grpc.ServiceDesc for ExerciseService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ExerciseService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "WorkoutService.ExerciseService",
+	HandlerType: (*ExerciseServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Create",
+			Handler:    _ExerciseService_Create_Handler,
+		},
+		{
+			MethodName: "Update",
+			Handler:    _ExerciseService_Update_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _ExerciseService_Delete_Handler,
+		},
+		{
+			MethodName: "ExerciseTitleRecommendation",
+			Handler:    _ExerciseService_ExerciseTitleRecommendation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

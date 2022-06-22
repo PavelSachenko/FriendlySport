@@ -5,11 +5,66 @@ package WorkoutService;
 option go_package = "github.com/pavel/workout_service/pkg/pb/workout";
 
 service WorkoutService {
-  rpc Create(CreateRequest) returns (CreateResponse);
-  rpc Delete(DeleteRequest) returns (DeleteResponse);
-  rpc Update(UpdateRequest) returns (UpdateResponse);
+  rpc Create(CreateWorkoutRequest) returns (CreateWorkoutResponse);
+  rpc Delete(DeleteWorkoutRequest) returns (DeleteWorkoutResponse);
+  rpc Update(UpdateWorkoutRequest) returns (UpdateWorkoutResponse);
   rpc All(WorkoutFilteringRequest) returns (WorkoutFilteringResponse);
   rpc WorkoutTitleRecommendation(WorkoutTitleRecommendationRequest) returns (WorkoutTitleRecommendationResponse);
+}
+
+service ExerciseService{
+  rpc Create(CreateExerciseRequest) returns (CreateExerciseResponse);
+  rpc Update(UpdateExerciseRequest) returns (UpdateExerciseResponse);
+  rpc Delete(DeleteExerciseRequest) returns (DeleteExerciseResponse);
+  rpc ExerciseTitleRecommendation(ExerciseTitleRecommendationRequest) returns (ExerciseTitleRecommendationResponse);
+
+}
+
+message CreateExerciseRequest{
+  uint64 user_id = 1;
+  uint64 workout_id = 2;
+  string title = 3;
+  string description = 4;
+}
+
+message CreateExerciseResponse{
+  uint32 status = 1;
+  string error = 2;
+  Exercise exercise = 3;
+}
+
+message UpdateExerciseRequest{
+  uint64 id = 1;
+  uint64 user_id = 2;
+  uint64 workout_id = 3;
+  bytes query = 4;
+}
+
+message UpdateExerciseResponse{
+  uint32 status = 1;
+  string error = 2;
+  Exercise exercise = 3;
+}
+
+message DeleteExerciseRequest{
+  uint64 id = 1;
+  uint64 user_id = 2;
+  uint64 workout_id = 3;
+}
+
+message DeleteExerciseResponse{
+  uint32 status = 1;
+  string error = 2;
+}
+
+message ExerciseTitleRecommendationRequest{
+  string typingTitle = 1;
+}
+
+message ExerciseTitleRecommendationResponse{
+  uint32 status = 1;
+  string error = 2;
+  repeated TitleRecommendation recommendationList = 3;
 }
 
 message Workout {
@@ -39,18 +94,18 @@ message Repetition{
   bool is_done = 4;
 }
 
-message WorkoutTitleRecommendation{
+message TitleRecommendation{
   string title = 1;
 }
 
-message CreateRequest{
+message CreateWorkoutRequest{
   uint64 user_id= 1;
   string title = 2;
   string description = 3;
   int64 appointed_time = 4;
 }
 
-message CreateResponse{
+message CreateWorkoutResponse{
   uint32 status = 1;
   string error = 2;
   Workout workout = 3;
@@ -75,27 +130,27 @@ message WorkoutTitleRecommendationRequest{
 message WorkoutTitleRecommendationResponse{
   uint32 status = 1;
   string error = 2;
-  repeated WorkoutTitleRecommendation recommendationList = 3;
+  repeated TitleRecommendation recommendationList = 3;
 }
 
-message UpdateRequest{
+message UpdateWorkoutRequest{
   uint64 id = 1;
   uint64 user_id = 2;
   bytes query = 3;
 }
 
-message UpdateResponse{
+message UpdateWorkoutResponse{
   uint32 status = 1;
   string error = 2;
   Workout workout = 3;
 }
 
-message DeleteRequest{
+message DeleteWorkoutRequest{
   uint64 id = 1;
   uint64 user_id = 2;
 }
 
-message DeleteResponse{
+message DeleteWorkoutResponse{
   uint32 status = 1;
   string error = 2;
 }

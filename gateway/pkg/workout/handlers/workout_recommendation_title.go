@@ -26,8 +26,8 @@ func WorkoutRecommendationTitle(ctx *gin.Context, c workout.WorkoutServiceClient
 		TypingTitle: workoutRecommendationRequest.Title,
 	})
 
-	if err != nil || res.Status != http.StatusOK {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, res)
+	if err != nil || res.Status >= http.StatusBadRequest {
+		ctx.AbortWithStatusJSON(int(res.Status), res)
 		return
 	}
 

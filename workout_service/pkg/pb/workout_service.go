@@ -9,50 +9,50 @@ import (
 	"net/http"
 )
 
-type Server struct {
+type GRPCWorkoutService struct {
 	workout service.Workout
 	logger  *logger.Logger
 	workout.WorkoutServiceServer
 }
 
-func InitGRPCWorkoutServer(workout service.Workout, logger *logger.Logger) *Server {
-	return &Server{
+func InitGRPCWorkoutService(workout service.Workout, logger *logger.Logger) *GRPCWorkoutService {
+	return &GRPCWorkoutService{
 		workout: workout,
 		logger:  logger,
 	}
 }
 
-func (s Server) Create(context context.Context, request *workout.CreateRequest) (*workout.CreateResponse, error) {
+func (s GRPCWorkoutService) Create(context context.Context, request *workout.CreateWorkoutRequest) (*workout.CreateWorkoutResponse, error) {
 
 	w := adapter.GRPCWorkoutCreateToWorkout(request, s.logger)
 	err, res := s.workout.AddList(w)
 	if err != nil {
-		return &workout.CreateResponse{
+		return &workout.CreateWorkoutResponse{
 			Status: http.StatusUnprocessableEntity,
 			Error:  err.Error(),
 		}, nil
 	}
 
-	return &workout.CreateResponse{
+	return &workout.CreateWorkoutResponse{
 		Status:  http.StatusCreated,
 		Workout: adapter.WorkoutToGRPC(res, s.logger),
 	}, nil
 }
 
-func (s Server) Delete(context context.Context, request *workout.DeleteRequest) (*workout.DeleteResponse, error) {
+func (s GRPCWorkoutService) Delete(context context.Context, request *workout.DeleteWorkoutRequest) (*workout.DeleteWorkoutResponse, error) {
 	err := s.workout.DeleteList(request.Id, request.UserId)
 	if err != nil {
-		return &workout.DeleteResponse{
+		return &workout.DeleteWorkoutResponse{
 			Status: http.StatusUnprocessableEntity,
 			Error:  err.Error(),
 		}, nil
 	}
-	return &workout.DeleteResponse{
+	return &workout.DeleteWorkoutResponse{
 		Status: http.StatusNoContent,
 	}, nil
 }
 
-func (s Server) Update(context context.Context, request *workout.UpdateRequest) (*workout.UpdateResponse, error) {
+func (s GRPCWorkoutService) Update(context context.Context, request *workout.UpdateWorkoutRequest) (*workout.UpdateWorkoutResponse, error) {
 	wError, workoutUpdate := adapter.GRPCWorkoutUpdateToWorkoutUpdate(request, s.logger)
 	if wError != nil {
 		return wError, nil
@@ -60,18 +60,18 @@ func (s Server) Update(context context.Context, request *workout.UpdateRequest) 
 	err, res := s.workout.UpdateList(*workoutUpdate)
 
 	if err != nil {
-		return &workout.UpdateResponse{
+		return &workout.UpdateWorkoutResponse{
 			Error:  err.Error(),
 			Status: http.StatusUnprocessableEntity,
 		}, nil
 	}
-	return &workout.UpdateResponse{
+	return &workout.UpdateWorkoutResponse{
 		Status:  http.StatusOK,
 		Workout: adapter.WorkoutToGRPC(res, s.logger),
 	}, nil
 }
 
-func (s Server) All(context context.Context, request *workout.WorkoutFilteringRequest) (*workout.WorkoutFilteringResponse, error) {
+func (s GRPCWorkoutService) All(context context.Context, request *workout.WorkoutFilteringRequest) (*workout.WorkoutFilteringResponse, error) {
 	resError, workoutsFiltering := adapter.GRPCToWorkoutList(request, *s.logger)
 	if resError != nil {
 		return resError, nil
@@ -93,7 +93,7 @@ func (s Server) All(context context.Context, request *workout.WorkoutFilteringRe
 	}, nil
 }
 
-func (s Server) WorkoutTitleRecommendation(context context.Context, request *workout.WorkoutTitleRecommendationRequest) (*workout.WorkoutTitleRecommendationResponse, error) {
+func (s GRPCWorkoutService) WorkoutTitleRecommendation(context context.Context, request *workout.WorkoutTitleRecommendationRequest) (*workout.WorkoutTitleRecommendationResponse, error) {
 	err, recommendationList := s.workout.RecommendationTitles(request.TypingTitle)
 	if err != nil {
 		return &workout.WorkoutTitleRecommendationResponse{

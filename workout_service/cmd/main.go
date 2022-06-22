@@ -14,7 +14,8 @@ import (
 )
 
 type gRPCServices struct {
-	Workout *pb.Server
+	Workout  *pb.GRPCWorkoutService
+	Exercise *pb.GRPCExerciseService
 }
 
 func main() {
@@ -41,7 +42,7 @@ func getTCPServer(logger *logger.Logger, cfg *config.Config) net.Listener {
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Failed init tcp server. ERROR: %s", err))
 	}
-	logger.Info(fmt.Sprintf("Server address: %s", lis.Addr().Network()))
+	logger.Info(fmt.Sprintf("GRPCWorkoutService address: %s", lis.Addr().Network()))
 	return lis
 }
 
@@ -69,16 +70,22 @@ func initGRPCServices(logger *logger.Logger, cfg *config.Config) (error, *gRPCSe
 	}
 
 	logger.Info("Init workout service")
-	workoutRepo := repository.InitWorkoutRepo(logger, postgres, elasticClient)
+	workoutRepo := repository.InitWorkoutPostgresRepo(logger, postgres, elasticClient)
 	workoutService := service.InitWorkoutService(logger, workoutRepo)
 
-	logger.Info("Init workout gGRPC server")
-	workoutServer := pb.InitGRPCWorkoutServer(
+	logger.Info("Init workout gGRPC service")
+	workoutGRPCService := pb.InitGRPCWorkoutService(
 		workoutService,
 		logger,
 	)
+
+	exerciseRepo := repository.InitExercisePostgresRepo(logger, postgres, elasticClient)
+	exerciseService := service.InitExerciseService(exerciseRepo)
+	logger.Info("Init exercise gGRPC service")
+	exerciseGRPCService := pb.InitGRPCExerciseService(exerciseService, logger)
 	return nil, &gRPCServices{
-		Workout: workoutServer,
+		Workout:  workoutGRPCService,
+		Exercise: exerciseGRPCService,
 	}
 }
 
@@ -86,6 +93,7 @@ func InitGrpcServer(logger *logger.Logger, lis net.Listener, services *gRPCServi
 	logger.Info(fmt.Sprintf("Init gRPC server"))
 	grpcServer := grpc.NewServer()
 	workout.RegisterWorkoutServiceServer(grpcServer, services.Workout)
+	workout.RegisterExerciseServiceServer(grpcServer, services.Exercise)
 	if err := grpcServer.Serve(lis); err != nil {
 		logger.Info(fmt.Sprintf("Failed serve gRPC server. ERROR: %s", err))
 	}

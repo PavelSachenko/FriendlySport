@@ -54,7 +54,7 @@ func GRPCToWorkoutList(request *workout.WorkoutFilteringRequest, logger logger.L
 	return nil, &workoutsFiltering
 }
 
-func GRPCWorkoutCreateToWorkout(request *workout.CreateRequest, logger *logger.Logger) *model.Workout {
+func GRPCWorkoutCreateToWorkout(request *workout.CreateWorkoutRequest, logger *logger.Logger) *model.Workout {
 	var t time.Time
 	t = time.Unix(request.AppointedTime, 0)
 	w := &model.Workout{
@@ -68,12 +68,12 @@ func GRPCWorkoutCreateToWorkout(request *workout.CreateRequest, logger *logger.L
 	return w
 }
 
-func GRPCWorkoutUpdateToWorkoutUpdate(request *workout.UpdateRequest, logger *logger.Logger) (*workout.UpdateResponse, *model.WorkoutUpdate) {
+func GRPCWorkoutUpdateToWorkoutUpdate(request *workout.UpdateWorkoutRequest, logger *logger.Logger) (*workout.UpdateWorkoutResponse, *model.WorkoutUpdate) {
 	workoutUpdate := model.WorkoutUpdate{UserId: request.UserId, Id: request.Id, UpdatedAt: time.Now()}
 	err := json.Unmarshal(request.Query, &workoutUpdate)
 	if err != nil {
 		logger.Error(err)
-		return &workout.UpdateResponse{
+		return &workout.UpdateWorkoutResponse{
 			Error:  err.Error(),
 			Status: http.StatusUnprocessableEntity,
 		}, nil
@@ -99,10 +99,10 @@ func WorkoutToGRPC(model *model.Workout, logger *logger.Logger) *workout.Workout
 	return w
 }
 
-func WorkoutRecommendationTitleToGRPC(recommendationList []*model.WorkoutRecommendation, logger *logger.Logger) []*workout.WorkoutTitleRecommendation {
-	var recommendations []*workout.WorkoutTitleRecommendation
+func WorkoutRecommendationTitleToGRPC(recommendationList []*model.WorkoutRecommendation, logger *logger.Logger) []*workout.TitleRecommendation {
+	var recommendations []*workout.TitleRecommendation
 	for _, recommendation := range recommendationList {
-		recommendations = append(recommendations, &workout.WorkoutTitleRecommendation{Title: recommendation.Title})
+		recommendations = append(recommendations, &workout.TitleRecommendation{Title: recommendation.Title})
 	}
 
 	return recommendations

@@ -21,7 +21,12 @@ type ExerciseIntoWorkout struct {
 type ExerciseUpdate struct {
 	Id          uint64  `json:"id"`
 	UserId      uint64  `json:"user_id"`
+	WorkoutId   uint64  `json:"workout_id"`
 	Title       *string `json:"title"`
 	Description *string `json:"description"`
 	IsDone      *bool   `json:"is_done"`
+}
+
+type ExerciseRecommendation struct {
+	Title string `json:"title" `
 }
