@@ -3,10 +3,14 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	//_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway"
+	//_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2"
 	"github.com/pavel/gateway/config"
 	"github.com/pavel/gateway/pkg/user"
 	"github.com/pavel/gateway/pkg/workout"
 	"github.com/sirupsen/logrus"
+	//_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
+	//_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 	"log"
 	"path"
 	"runtime"
@@ -32,10 +36,20 @@ func main() {
 
 	fmt.Printf("cfg: %v", cfg)
 	r := gin.Default()
+	r.Use(CORSMiddleware)
 	api := r.Group("api")
 
 	userSvc := user.RegisterRoute(api, *cfg)
 	workout.RegisterRoute(api, *cfg, userSvc)
 
 	r.Run(":" + cfg.Port)
+}
+
+func CORSMiddleware(ctx *gin.Context) {
+	ctx.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	ctx.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+	ctx.Writer.Header().Set("Access-Control-Allow-Methods", "*")
+	ctx.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, access-control-allow-origin, access-control-allow-headers, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+
+	ctx.Next()
 }

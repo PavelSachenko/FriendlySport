@@ -3,7 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/pavel/workout_service/pkg/errors"
 	"github.com/pavel/workout_service/pkg/logger"
 )

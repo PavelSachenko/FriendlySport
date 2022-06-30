@@ -24,3 +24,6 @@ migrate:
 
 migrate-create:
 	migrate create -ext sql -dir migration friendly_sport
+
+elastic-migrate:
+	./elastic_migrations.sh

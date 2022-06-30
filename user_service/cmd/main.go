@@ -36,7 +36,6 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Tcp server error: %v", err)
 	}
-
 	err, gRPCServers := initGRPCServices(cfg, logger)
 	if err != nil {
 		logger.Fatalf("Not init gRPC server: %v", err)

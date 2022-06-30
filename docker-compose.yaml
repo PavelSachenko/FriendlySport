@@ -1,0 +1,124 @@
+version: "3.9"
+
+services:
+  gateway:
+    build: './gateway'
+    volumes:
+      - ./gateway/cmd:/cmd
+    depends_on:
+      - user_service
+      - workout_service
+    ports:
+      - "60000:60000"
+    environment:
+      - "USER_SERVICE_URL=user_service:50001"
+      - "WORKOUT_SERVICE_URL=workout_service:50002"
+
+
+
+  user_service:
+    build: './user_service'
+    volumes:
+      - ./user_service/cmd:/cmd
+    depends_on:
+      - user_service_postgres_db
+      - user_service_redis_db
+    links:
+      - user_service_postgres_db
+      - user_service_redis_db
+    ports:
+      - "50001:50001"
+    command: ["./wait-for-it/wait-for-it.sh", "user_service_postgres_db:5432", "user_service_redis_db:6379", "-t", "600000000", "--", "/build"]
+    restart: on-failure
+
+
+
+  workout_service:
+    build: './workout_service'
+    volumes:
+      - ./workout_service/cmd:/cmd
+    depends_on:
+      - workout_service_postgres_db
+      - workout_elasticsearch
+    links:
+      - workout_service_postgres_db
+      - workout_elasticsearch
+    ports:
+      - "50002:50002"
+    command: ["./wait-for-it/wait-for-it.sh", "workout_service_postgres_db:5432", "workout_elasticsearch:9200", "-t", "600000000", "--", "/build"]
+    restart: on-failure
+
+
+  user_service_postgres_db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: "friendly_sport_user_service"
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "pass"
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./user_service/postgres-data:/var/lib/postgresql/data
+
+
+  user_service_redis_db:
+    image: "redis"
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - cache:/data
+
+
+  workout_service_postgres_db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: "workout_sport_user_service"
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "pass"
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./workout_service/postgres-data:/var/lib/postgresql/data
+
+
+  workout_elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+    container_name: workout_elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+      - network.host=0.0.0.0
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.4.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://workout_elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      - workout_elasticsearch
+
+
+volumes:
+  cache:
+    driver: local
+  elasticsearch-data:
+    driver: local

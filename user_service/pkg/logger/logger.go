@@ -50,7 +50,7 @@ func init() {
 		},
 	})
 	_, filename, _, _ := runtime.Caller(0)
-	dir := path.Join(path.Dir(filename), "../../..")
+	dir := path.Join(path.Dir(filename), "../..")
 	file, err := os.OpenFile(dir+"/logs/user.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
 	if err != nil {
 		l.Fatal(err)

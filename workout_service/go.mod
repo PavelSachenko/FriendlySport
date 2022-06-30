@@ -3,7 +3,7 @@ module github.com/pavel/workout_service
 go 1.18
 
 require (
-	github.com/elastic/go-elasticsearch/v8 v8.0.0
+	github.com/elastic/go-elasticsearch/v7 v7.0.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.6
 	github.com/spf13/viper v1.12.0
@@ -14,6 +14,7 @@ require (
 require (
 	github.com/Masterminds/squirrel v1.5.3 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.0.0-alpha // indirect
+	github.com/elastic/go-elasticsearch/v7 v7.17.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.8.1 // indirect
