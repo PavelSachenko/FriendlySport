@@ -10,9 +10,6 @@ func RegisterRoute(r *gin.RouterGroup, cfg config.Config) ServiceClient {
 	svc := InitServiceClient(cfg)
 	authMiddleware := AuthMiddleware{svc: svc}
 	r.GET("roles", svc.roles)
-	r.GET("testt", func(context *gin.Context) {
-		context.JSON(200, "test")
-	})
 	routes := r.Group("/auth")
 	routes.POST("login", svc.login)
 	routes.POST("register", svc.register)

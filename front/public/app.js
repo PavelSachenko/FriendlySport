@@ -1,14 +1,13 @@
 const Http = new XMLHttpRequest();
-const url_test='http://localhost:60000/api/testt';
-const url_role='http://localhost:60000/api/roles/';
+const url_test='http://localhost:3333/test';
+const url_hello='http://localhost:3333/hello';
 
-function getRoles(){
-    Http.open("GET", url_role);
+function getHello(){
+    Http.open("GET", url_hello);
     Http.onreadystatechange = (e) => {
         console.log(Http.responseText)
     }
     Http.send();
-
 }
 
 function getTest(){
@@ -17,5 +16,12 @@ function getTest(){
         console.log(Http.responseText)
     }
     Http.send();
+}
 
+function getRoles(){
+    Http.open("GET", "http://localhost:60000/api/roles")
+    Http.onreadystatechange = (e) => {
+        console.log(Http.responseText)
+    }
+    Http.send()
 }

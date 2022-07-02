@@ -9,7 +9,6 @@ import (
 )
 
 func Roles(ctx *gin.Context, c role.RoleServiceClient) {
-
 	res, err := c.All(context.Background(), &empty.Empty{})
 	if err != nil || res.Status >= http.StatusBadRequest {
 		ctx.AbortWithStatusJSON(int(res.Status), res)
