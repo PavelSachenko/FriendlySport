@@ -38,7 +38,7 @@ func getConfig(logger *logger.Logger) *config.Config {
 
 func getTCPServer(logger *logger.Logger, cfg *config.Config) net.Listener {
 	logger.Info("Init tcp server")
-	lis, err := net.Listen("tcp", cfg.Server.Port)
+	lis, err := net.Listen("tcp", cfg.Server.Host+cfg.Server.Port)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Failed init tcp server. ERROR: %s", err))
 	}

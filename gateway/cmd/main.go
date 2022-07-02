@@ -38,7 +38,7 @@ func main() {
 	userSvc := user.RegisterRoute(api, *cfg)
 	workout.RegisterRoute(api, *cfg, userSvc)
 
-	r.Run(":" + cfg.Port)
+	r.Run(cfg.Host + ":" + cfg.Port)
 }
 
 func CORSMiddleware(ctx *gin.Context) {

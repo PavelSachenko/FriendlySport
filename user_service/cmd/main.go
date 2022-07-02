@@ -32,7 +32,7 @@ func main() {
 
 	logger.Infof("cfg: %v", cfg)
 	logger.Info("Initial user service tcp server")
-	lis, err := net.Listen("tcp", cfg.Server.Port)
+	lis, err := net.Listen("tcp", cfg.Server.Host+cfg.Server.Port)
 	if err != nil {
 		logger.Fatalf("Tcp server error: %v", err)
 	}
